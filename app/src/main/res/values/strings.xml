@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">ModernApp001</string>
+    <string name="open_activity">Open Activity</string>
+    <string name="java8_desugar_test">Test Java8 desugar</string>
+    <string name="title_activity_main2">MainActivity2</string>
+</resources>
