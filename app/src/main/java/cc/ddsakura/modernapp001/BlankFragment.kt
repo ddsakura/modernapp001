@@ -30,7 +30,7 @@ class BlankFragment : Fragment(R.layout.fragment_blank) {
             val func = BiFunction { a: Int, b: Int -> a + b }
             val result = "Desugaring ${func.apply(1, 2)}"
             Toast.makeText(requireContext(), result, Toast.LENGTH_SHORT).show()
-            val d = Log.d(TAG, result)
+            Log.d(TAG, result)
         }
         binding.myButton3.setOnClickListener {
             val channelId = "CHANNEL_ID"
