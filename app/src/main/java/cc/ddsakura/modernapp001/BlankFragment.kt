@@ -26,6 +26,9 @@ class BlankFragment : Fragment(R.layout.fragment_blank) {
         binding.myButton.setOnClickListener {
             startActivity(Intent(requireContext(), MainActivity2::class.java))
         }
+        binding.myButton4.setOnClickListener {
+            startActivity(Intent(requireContext(), MainActivity3::class.java))
+        }
         binding.myButton2.setOnClickListener {
             val func = BiFunction { a: Int, b: Int -> a + b }
             val result = "Desugaring ${func.apply(1, 2)}"
