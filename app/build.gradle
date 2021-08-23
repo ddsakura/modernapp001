@@ -45,10 +45,10 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.6.0'
     // to fix Rejecting re-init on previously-failed class java.lang.Class<androidx.core.view.ViewCompat$2>: java.lang.NoClassDefFoundError: Failed resolution of: Landroid/view/View$OnUnhandledKeyEventListener;
     // so using 1.3.0-beta01 in the meantime
-    implementation 'androidx.appcompat:appcompat:1.3.0'
-    implementation 'androidx.fragment:fragment-ktx:1.3.5'
-    implementation 'com.google.android.material:material:1.3.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+    implementation 'androidx.appcompat:appcompat:1.3.1'
+    implementation 'androidx.fragment:fragment-ktx:1.3.6'
+    implementation 'com.google.android.material:material:1.4.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.0'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 
     implementation "androidx.navigation:navigation-fragment-ktx:2.3.5"
