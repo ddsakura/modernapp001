@@ -38,8 +38,8 @@ class BlankFragment : Fragment(R.layout.fragment_blank) {
         binding.myButton3.setOnClickListener {
             val channelId = "CHANNEL_ID"
             createNotificationChannel(channelId)
-            var builder = NotificationCompat.Builder(requireContext(), channelId)
-                    .setSmallIcon(R.drawable.ic_launcher_background)
+            val builder = NotificationCompat.Builder(requireContext(), channelId)
+                    .setSmallIcon(R.drawable.cross)
                     .setContentTitle("This is Title")
                     .setContentText("This is Content")
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -57,7 +57,7 @@ class BlankFragment : Fragment(R.layout.fragment_blank) {
         _binding = null
     }
 
-    fun createNotificationChannel(channelId: String) {
+    private fun createNotificationChannel(channelId: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Create the NotificationChannel
             val name = "This is channel name"
