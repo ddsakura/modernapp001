@@ -28,3 +28,17 @@ jobs:
         with:
           api-level: 29
           script: ./gradlew connectedAndroidTest
+
+  build:
+    needs: [ unit_tests, android_tests ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Generate Release APK
+        run: ./gradlew assembleRelease
+
+      - uses: actions/upload-artifact@master
+        with:
+          name: debug.apk
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
