@@ -65,6 +65,9 @@ class MainActivity : AppCompatActivity() {
                 MyFunctionButton(resId = R.string.open_activity, onClick = {
                     context.startActivity(Intent(context, MainActivity3::class.java))
                 })
+                MyFunctionButton(resId = R.string.open_webview_activity, onClick = {
+                    context.startActivity(Intent(context, WebviewActivity::class.java))
+                })
             }
         }
     }
