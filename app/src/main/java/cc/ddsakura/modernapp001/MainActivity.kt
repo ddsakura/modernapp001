@@ -113,5 +113,5 @@ private fun MyFunctionButton(@StringRes resId: Int, onClick: () -> Unit) {
 @Preview(showBackground = true, name = "Text preview")
 @Composable
 fun DefaultPreview() {
-    MyFunctionButton(resId = R.string.open_activity, {})
+    MyFunctionButton(resId = R.string.open_activity) {}
 }
