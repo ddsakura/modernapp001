@@ -1,5 +1,6 @@
 package cc.ddsakura.modernapp001
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import android.webkit.ConsoleMessage
@@ -11,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewClientCompat
 
 class WebviewActivity : AppCompatActivity() {
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // setContentView(R.layout.activity_webview)
@@ -20,7 +22,7 @@ class WebviewActivity : AppCompatActivity() {
 
         myWebView.settings.apply {
             javaScriptEnabled = true
-            userAgentString = "${userAgentString} HelloUserAgent 0"
+            userAgentString = "$userAgentString HelloUserAgent 0"
         }
         WebView.setWebContentsDebuggingEnabled(true)
         myWebView.webViewClient = MyWebViewClient()
@@ -35,7 +37,7 @@ private class MyWebViewClient : WebViewClientCompat() {
 
     override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
         Log.d("WebviewActivity", "shouldOverrideUrlLoading url")
-        return false
+        return super.shouldOverrideUrlLoading(view, url)
     }
 
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
@@ -48,11 +50,11 @@ private class MyWebViewClient : WebViewClientCompat() {
         request: WebResourceRequest?
     ): WebResourceResponse? {
 
-        view?.post(Runnable {
-            if ((view?.settings?.userAgentString?.contains("HelloUserAgent") ?: false) == false) {
-                view?.settings?.userAgentString = "HelloUserAgent ${useragentIdx++}"
+        view?.post {
+            if (view.settings.userAgentString?.contains("HelloUserAgent") != true) {
+                view.settings.userAgentString = "HelloUserAgent ${useragentIdx++}"
             }
-        })
+        }
 
         Log.d("WebviewActivity", "shouldInterceptRequest WebResourceRequest: ${request?.url} /  ${request?.method}")
         return super.shouldInterceptRequest(view, request)
