@@ -15,7 +15,6 @@ class WebviewActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // setContentView(R.layout.activity_webview)
         val myWebView = WebView(applicationContext)
         setContentView(myWebView)
 
@@ -33,13 +32,6 @@ class WebviewActivity : AppCompatActivity() {
 
 private class MyWebViewClient : WebViewClientCompat() {
 
-    var useragentIdx = 0
-
-    override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-        Log.d("WebviewActivity", "shouldOverrideUrlLoading url")
-        return super.shouldOverrideUrlLoading(view, url)
-    }
-
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
         Log.d("WebviewActivity", "shouldOverrideUrlLoading WebResourceRequest: ${request.url} /  ${request.method}")
         return super.shouldOverrideUrlLoading(view, request)
@@ -52,7 +44,7 @@ private class MyWebViewClient : WebViewClientCompat() {
 
         view?.post {
             if (view.settings.userAgentString?.contains("HelloUserAgent") != true) {
-                view.settings.userAgentString = "HelloUserAgent ${useragentIdx++}"
+                view.settings.userAgentString = "HelloUserAgent"
             }
         }
 
