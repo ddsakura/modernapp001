@@ -125,10 +125,7 @@ fun NavigationHost(tag: String, navController: NavHostController) {
             Contacts()
         }
         composable(NavRoutes.Favorites.route) {
-            Favorites()
-        }
-        composable("route1") {
-            Contacts()
+            Favorites(tag)
         }
     }
 }
@@ -144,10 +141,16 @@ fun BottomNavigationBar(navController: NavHostController) {
                 selected = currentRoute == navItem.route,
                 onClick = {
                     navController.navigate(navItem.route) {
+                        // Pop up to the start destination of the graph to
+                        // avoid building up a large stack of destinations
+                        // on the back stack as users select items
                         popUpTo(navController.graph.findStartDestination().id) {
                             saveState = true
                         }
+                        // Avoid multiple copies of the same destination when
+                        // reselecting the same item
                         launchSingleTop = true
+                        // Restore state when reselecting a previously selected item
                         restoreState = true
                     }
                 },
@@ -182,11 +185,11 @@ fun Contacts() {
 }
 
 @Composable
-fun Favorites() {
+fun Favorites(tag: String) {
     // https://io.google/2022/program/5c6a8dbb-7ac2-4c31-a707-0a16e8424970/
     // https://developer.android.com/reference/kotlin/androidx/activity/compose/package-summary#BackHandler(kotlin.Boolean,kotlin.Function0)
     BackHandler(enabled = true) {
-        print("BackHandler")
+        Log.d(tag, "BackHandler")
     }
 
     Box(
