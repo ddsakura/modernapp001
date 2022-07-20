@@ -1,31 +1,51 @@
 package cc.ddsakura.modernapp001
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.BottomNavigation
+import androidx.compose.material.BottomNavigationItem
 import androidx.compose.material.Button
+import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Scaffold
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
+import androidx.compose.material.TopAppBar
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import java.util.function.BiFunction
 
 // xml way
@@ -36,57 +56,199 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            Column {
-                val context = LocalContext.current
-                MyFunctionButton(resId = R.string.open_activity, onClick = {
-                    context.startActivity(Intent(context, MainActivity2::class.java))
-                })
-                MyFunctionButton(resId = R.string.java8_desugar_test, onClick = {
-                    val func = BiFunction { a: Int, b: Int -> a + b }
-                    val result = "Desugaring ${func.apply(1, 2)}"
-                    Toast.makeText(context, result, Toast.LENGTH_SHORT).show()
-                    Log.d(TAG, result)
-                })
-                MyFunctionButton(resId = R.string.heads_up_notification, onClick = {
-                    val channelId = "CHANNEL_ID"
-                    createNotificationChannel(channelId)
-                    val builder = NotificationCompat.Builder(context, channelId)
-                        .setSmallIcon(R.drawable.cross)
-                        .setContentTitle("This is Title")
-                        .setContentText("This is Content")
-                        .setPriority(NotificationCompat.PRIORITY_HIGH)
-                        .setVibrate(longArrayOf(0))
-
-                    with(NotificationManagerCompat.from(context)) {
-                        // notificationId is a unique int for each notification that you must define
-                        notify(1001, builder.build())
+            // Navigating with Compose: https://developer.android.com/jetpack/compose/navigation
+            val navController = rememberNavController()
+            Scaffold(
+                topBar = { TopAppBar(title = { Text("Top Bar") }) },
+                // https://stackoverflow.com/questions/72084865/content-padding-parameter-it-is-not-used
+                content = { padding ->
+                    Column(
+                        modifier = Modifier
+                            .padding(padding)
+                    ) {
+                        NavigationHost(TAG, navController = navController)
                     }
-                })
-                MyFunctionButton(resId = R.string.open_activity, onClick = {
-                    context.startActivity(Intent(context, MainActivity3::class.java))
-                })
-                MyFunctionButton(resId = R.string.open_webview_activity, onClick = {
-                    context.startActivity(Intent(context, WebviewActivity::class.java))
-                })
-            }
-        }
-    }
-
-    private fun createNotificationChannel(channelId: String) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Create the NotificationChannel
-            val name = "This is channel name"
-            val descriptionText = "This is channel description"
-            val importance = NotificationManager.IMPORTANCE_HIGH
-            val mChannel = NotificationChannel(channelId, name, importance)
-            mChannel.description = descriptionText
-            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(mChannel)
+                },
+                bottomBar = { BottomNavigationBar(navController = navController) }
+            )
         }
     }
 
     companion object {
         private const val TAG = "MainActivity"
+    }
+}
+
+// https://kotlinlang.org/docs/sealed-classes.html
+sealed class NavRoutes(val route: String) {
+    object Home : NavRoutes("home")
+    object Contacts : NavRoutes("contacts")
+    object Favorites : NavRoutes("favorites")
+}
+
+data class BarItem(
+    val title: String,
+    val image: ImageVector,
+    val route: String
+)
+
+object NavBarItems {
+    val BarItems = listOf(
+        BarItem(
+            title = "Home",
+            image = Icons.Filled.Home,
+            route = NavRoutes.Home.route
+        ),
+        BarItem(
+            title = "Contacts",
+            image = Icons.Filled.Face,
+            route = NavRoutes.Contacts.route
+        ),
+        BarItem(
+            title = "Favorites",
+            image = Icons.Filled.Favorite,
+            route = NavRoutes.Favorites.route
+        )
+    )
+}
+
+@Composable
+fun NavigationHost(tag: String, navController: NavHostController) {
+    NavHost(
+        navController = navController,
+        startDestination = NavRoutes.Home.route,
+    ) {
+        composable(NavRoutes.Home.route) {
+            MainContent(tag)
+        }
+        composable(NavRoutes.Contacts.route) {
+            Contacts()
+        }
+        composable(NavRoutes.Favorites.route) {
+            Favorites()
+        }
+        composable("route1") {
+            Contacts()
+        }
+    }
+}
+
+@Composable
+fun BottomNavigationBar(navController: NavHostController) {
+    BottomNavigation {
+        val backStackEntry by navController.currentBackStackEntryAsState()
+        val currentRoute = backStackEntry?.destination?.route
+
+        NavBarItems.BarItems.forEach { navItem ->
+            BottomNavigationItem(
+                selected = currentRoute == navItem.route,
+                onClick = {
+                    navController.navigate(navItem.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                icon = {
+                    Icon(
+                        imageVector = navItem.image,
+                        contentDescription = navItem.title
+                    )
+                },
+                label = {
+                    Text(text = navItem.title)
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun Contacts() {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Face,
+            contentDescription = NavRoutes.Contacts.route,
+            tint = Color.Blue,
+            modifier = Modifier
+                .size(150.dp)
+                .align(Alignment.Center)
+        )
+    }
+}
+
+@Composable
+fun Favorites() {
+    // https://io.google/2022/program/5c6a8dbb-7ac2-4c31-a707-0a16e8424970/
+    // https://developer.android.com/reference/kotlin/androidx/activity/compose/package-summary#BackHandler(kotlin.Boolean,kotlin.Function0)
+    BackHandler(enabled = true) {
+        print("BackHandler")
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Favorite,
+            contentDescription = NavRoutes.Favorites.route,
+            tint = Color.Blue,
+            modifier = Modifier
+                .size(150.dp)
+                .align(Alignment.Center)
+        )
+    }
+}
+
+@Composable
+private fun MainContent(tag: String, mainContentViewModel: MainContentViewModel = viewModel()) {
+    val context = LocalContext.current
+    LazyColumn {
+        item {
+            MyFunctionButton(resId = R.string.open_activity, onClick = {
+                context.startActivity(Intent(context, MainActivity2::class.java))
+            })
+        }
+        item {
+            MyFunctionButton(resId = R.string.java8_desugar_test, onClick = {
+                val func = BiFunction { a: Int, b: Int -> a + b }
+                val result = "Desugaring ${func.apply(1, 2)}"
+                Toast.makeText(context, result, Toast.LENGTH_SHORT).show()
+                Log.d(tag, result)
+            })
+        }
+        item {
+            MyFunctionButton(resId = R.string.heads_up_notification, onClick = {
+                mainContentViewModel.createIfNeedAndSendNotification(context)
+            })
+        }
+        item {
+            MyFunctionButton(resId = R.string.open_activity, onClick = {
+                context.startActivity(Intent(context, MainActivity3::class.java))
+            })
+        }
+        item {
+            MyFunctionButton(resId = R.string.open_webview_activity, onClick = {
+                context.startActivity(Intent(context, WebviewActivity::class.java))
+            })
+        }
+        items(25) { index ->
+            Surface(
+                color = MaterialTheme.colors.primary,
+                modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp)
+                ) {
+                    Text(text = "Item: $index")
+                }
+            }
+        }
     }
 }
 
@@ -96,7 +258,10 @@ private fun MyFunctionButton(@StringRes resId: Int, onClick: () -> Unit) {
         color = MaterialTheme.colors.primary,
         modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(24.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
         ) {
             Button(
                 onClick = onClick
