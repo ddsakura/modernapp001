@@ -1,11 +1,17 @@
 package cc.ddsakura.modernapp001
 
+import android.Manifest.permission.POST_NOTIFICATIONS
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
@@ -39,6 +45,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -46,6 +54,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import cc.ddsakura.modernapp001.extensions.getActivity
 import java.util.function.BiFunction
 
 // xml way
@@ -209,6 +218,19 @@ fun Favorites(tag: String) {
 @Composable
 private fun MainContent(tag: String, mainContentViewModel: MainContentViewModel = viewModel()) {
     val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            // Permission Accepted: Do something
+            Log.d(tag, "PERMISSION GRANTED")
+            mainContentViewModel.createIfNeedAndSendNotification(context)
+        } else {
+            // Permission Denied: Do something
+            Log.d(tag, "PERMISSION DENIED")
+        }
+    }
+
     LazyColumn {
         item {
             MyFunctionButton(resId = R.string.open_activity, onClick = {
@@ -225,7 +247,29 @@ private fun MainContent(tag: String, mainContentViewModel: MainContentViewModel 
         }
         item {
             MyFunctionButton(resId = R.string.heads_up_notification, onClick = {
-                mainContentViewModel.createIfNeedAndSendNotification(context)
+                when {
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_GRANTED -> {
+                        mainContentViewModel.createIfNeedAndSendNotification(context)
+                    }
+                    context.getActivity()?.let {
+                        ActivityCompat.shouldShowRequestPermissionRationale(
+                            it, POST_NOTIFICATIONS
+                        )
+                    } == true -> {
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        val uri: Uri = Uri.fromParts("package", "cc.ddsakura.modernapp001", null)
+                        intent.data = uri
+                        context.startActivity(intent)
+                    }
+                    else -> {
+                        // Asking for permission
+                        launcher.launch(POST_NOTIFICATIONS)
+                    }
+                }
             })
         }
         item {
