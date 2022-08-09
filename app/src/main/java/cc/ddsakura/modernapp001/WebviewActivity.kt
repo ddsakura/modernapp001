@@ -29,7 +29,7 @@ class WebviewActivity : AppCompatActivity() {
         WebView.setWebContentsDebuggingEnabled(true)
         myWebView.webViewClient = MyWebViewClient()
         myWebView.webChromeClient = MyWebChromeClient()
-        myWebView.loadUrl("https://www.google.com")
+        myWebView.loadUrl("https://www.w3schools.com/tags/tryit.asp?filename=tryhtml5_input_type_date")
 
         // ref: https://codelabs.developers.google.com/handling-gesture-back-navigation
         val onBackPressedCallback = object : OnBackPressedCallback(true) {
