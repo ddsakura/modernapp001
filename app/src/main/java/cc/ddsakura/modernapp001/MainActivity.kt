@@ -67,8 +67,13 @@ class MainActivity : AppCompatActivity() {
         setContent {
             // Navigating with Compose: https://developer.android.com/jetpack/compose/navigation
             val navController = rememberNavController()
+            val currentBackStack by navController.currentBackStackEntryAsState()
+            val currentDestination = currentBackStack?.destination
+            val currentScreen = NavBarItems.BarItems.find { it.route == currentDestination?.route } ?: NavBarItems.BarItems[0]
             Scaffold(
-                topBar = { TopAppBar(title = { Text("Top Bar") }) },
+                topBar = { TopAppBar(title = {
+                    Text(text = currentScreen.title)
+                }) },
                 // https://stackoverflow.com/questions/72084865/content-padding-parameter-it-is-not-used
                 content = { padding ->
                     Column(
