@@ -55,6 +55,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import cc.ddsakura.modernapp001.extensions.getActivity
+import cc.ddsakura.modernapp001.hellocard.HelloCard
 import java.util.function.BiFunction
 
 // xml way
@@ -217,6 +218,8 @@ fun Favorites(tag: String) {
                 .size(150.dp)
                 .align(Alignment.Center)
         )
+        // the component using relay https://www.figma.com/community/plugin/1041056822461507786/Relay-for-Figma
+        HelloCard(title="Balloon World!")
     }
 }
 
