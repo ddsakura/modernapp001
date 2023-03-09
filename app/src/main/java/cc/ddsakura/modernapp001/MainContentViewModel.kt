@@ -9,8 +9,8 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.ViewModel
 
-class MainContentViewModel() : ViewModel() {
-    fun createNotificationChannel(context: Context, channelId: String) {
+class MainContentViewModel : ViewModel() {
+    private fun createNotificationChannel(context: Context, channelId: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Create the NotificationChannel
             val name = "This is channel name"
@@ -24,7 +24,7 @@ class MainContentViewModel() : ViewModel() {
         }
     }
 
-    fun sendNotification(context: Context) {
+    private fun sendNotification(context: Context) {
         val channelId = "CHANNEL_ID"
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.cross)

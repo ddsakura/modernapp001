@@ -4,7 +4,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
-    // Android 13 notification runtime permission, https://developer.android.com/about/versions/13/changes/notification-permission
+    <!-- Android 13 notification runtime permission, https://developer.android.com/about/versions/13/changes/notification-permission-->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <application
