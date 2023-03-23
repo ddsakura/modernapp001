@@ -66,6 +66,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             // Navigating with Compose: https://developer.android.com/jetpack/compose/navigation
+            // https://developer.android.com/jetpack/compose/navigation#bottom_navigation
             val navController = rememberNavController()
             val currentBackStack by navController.currentBackStackEntryAsState()
             val currentDestination = currentBackStack?.destination
