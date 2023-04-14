@@ -13,6 +13,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.BottomNavigation
 import androidx.compose.material.BottomNavigationItem
 import androidx.compose.material.Button
@@ -36,7 +38,10 @@ import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -224,9 +229,12 @@ fun Favorites(tag: String) {
 @Composable
 private fun MainContent(tag: String, mainContentViewModel: MainContentViewModel = viewModel()) {
     val context = LocalContext.current
+    val permissionState = remember { mutableStateOf(false) }
+    val showAlertDialog = remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
+        permissionState.value = isGranted
         if (isGranted) {
             // Permission Accepted: Do something
             Log.d(tag, "PERMISSION GRANTED")
@@ -234,7 +242,24 @@ private fun MainContent(tag: String, mainContentViewModel: MainContentViewModel 
         } else {
             // Permission Denied: Do something
             Log.d(tag, "PERMISSION DENIED")
+
         }
+    }
+
+    if (showAlertDialog.value) {
+        AlertDialog(
+            onDismissRequest = { showAlertDialog.value = false },
+            title = { Text("Notification Permission Required") },
+            text = { Text("This app needs permission to show notifications.") },
+            confirmButton = {
+                Button(onClick = {
+                    launcher.launch(POST_NOTIFICATIONS)
+                    showAlertDialog.value = false
+                }) {
+                    Text("OK")
+                }
+            }
+        )
     }
 
     LazyColumn {
@@ -253,29 +278,83 @@ private fun MainContent(tag: String, mainContentViewModel: MainContentViewModel 
         }
         item {
             MyFunctionButton(resId = R.string.heads_up_notification, onClick = {
-                when {
-                    ContextCompat.checkSelfPermission(
-                        context,
-                        POST_NOTIFICATIONS
-                    ) == PackageManager.PERMISSION_GRANTED -> {
-                        mainContentViewModel.createIfNeedAndSendNotification(context)
-                    }
-                    context.getActivity()?.let {
-                        ActivityCompat.shouldShowRequestPermissionRationale(
-                            it, POST_NOTIFICATIONS
-                        )
-                    } == true -> {
-                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        val uri: Uri = Uri.fromParts("package", "cc.ddsakura.modernapp001", null)
-                        intent.data = uri
-                        context.startActivity(intent)
-                    }
-                    else -> {
-                        // Asking for permission
-                        launcher.launch(POST_NOTIFICATIONS)
-                    }
+                if (ContextCompat.checkSelfPermission(context, POST_NOTIFICATIONS) == PackageManager.PERMISSION_DENIED) {
+                    // show a custom message explaining why the app needs the notification permission
+                    showAlertDialog.value = true
+                } else {
+                    // notification permission is granted, show a Snackbar to let the user know
+                    mainContentViewModel.createIfNeedAndSendNotification(context)
                 }
+
+
+
+//                when {
+//                    ContextCompat.checkSelfPermission(
+//                        context,
+//                        POST_NOTIFICATIONS
+//                    ) == PackageManager.PERMISSION_GRANTED -> {
+//                        mainContentViewModel.createIfNeedAndSendNotification(context)
+//                    }
+//                    context.getActivity()?.let {
+//                        ActivityCompat.shouldShowRequestPermissionRationale(
+//                            it, POST_NOTIFICATIONS
+//                        )
+//                    } == true -> {
+//                        Log.d(tag, "shouldShowRequestPermissionRationale")
+//                        val builder = AlertDialog.Builder(context)
+//                        // Set the alert dialog title
+//                        builder.setTitle("Permission required")
+//                        // Display a message on alert dialog
+//                        builder.setMessage("This app needs permission to send notifications.")
+//                        // Set a positive button and its click listener on alert dialog
+//                        builder.setPositiveButton("OK") { _, _ ->
+//                            // Do something when user press the positive button
+//                            Log.d(tag, "OK")
+//                            launcher.launch(POST_NOTIFICATIONS)
+//                        }
+//                        // Display a negative button on alert dialog
+//                        builder.setNegativeButton("Cancel") { _, _ ->
+//                            Log.d(tag, "Cancel")
+//                        }
+//                        // Finally, make the alert dialog using builder
+//                        val dialog: AlertDialog = builder.create()
+//                        // Display the alert dialog on app interface
+//                        dialog.show()
+//                    }
+//                    context.getActivity()?.let {
+//                        ActivityCompat.shouldShowRequestPermissionRationale(
+//                            it, POST_NOTIFICATIONS
+//                        )
+//                    } == false -> {
+//                        val builder = AlertDialog.Builder(context)
+//                        // Set the alert dialog title
+//                        builder.setTitle("Permission required")
+//                        // Display a message on alert dialog
+//                        builder.setMessage("This app needs permission to send notifications. Go to settings to allow it.")
+//                        // Set a positive button and its click listener on alert dialog
+//                        builder.setPositiveButton("OK") { _, _ ->
+//                            // Do something when user press the positive button
+//                            Log.d(tag, "OK")
+//                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+//                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+//                            val uri: Uri = Uri.fromParts("package", "cc.ddsakura.modernapp001", null)
+//                            intent.data = uri
+//                            context.startActivity(intent)
+//                        }
+//                        // Display a negative button on alert dialog
+//                        builder.setNegativeButton("Cancel") { _, _ ->
+//                            Log.d(tag, "Cancel")
+//                        }
+//                        // Finally, make the alert dialog using builder
+//                        val dialog: AlertDialog = builder.create()
+//                        // Display the alert dialog on app interface
+//                        dialog.show()
+//                    }
+//                    else -> {
+//                        // Asking for permission
+//                        launcher.launch(POST_NOTIFICATIONS)
+//                    }
+//                }
             })
         }
         item {
@@ -328,8 +407,20 @@ private fun MyFunctionButton(@StringRes resId: Int, onClick: () -> Unit) {
     }
 }
 
-@Preview(showBackground = true, name = "Text preview")
+@Preview(showBackground = true, name = "MyFunctionButton")
 @Composable
-fun DefaultPreview() {
+fun PreviewMyFunctionButton() {
     MyFunctionButton(resId = R.string.open_activity) {}
+}
+
+@Preview(showBackground = true, name = "MainContent")
+@Composable
+fun PreviewMainContent() {
+    MainContent(tag = "MainContentPreview")
+}
+
+@Preview(showBackground = true, name = "BottomNavigationBar")
+@Composable
+fun PreviewBottomNavigationBar() {
+    BottomNavigationBar(navController = rememberNavController())
 }
