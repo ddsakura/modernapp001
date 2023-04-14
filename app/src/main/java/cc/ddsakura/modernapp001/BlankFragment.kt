@@ -1,16 +1,21 @@
 package cc.ddsakura.modernapp001
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context.NOTIFICATION_SERVICE
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import cc.ddsakura.modernapp001.databinding.FragmentBlankBinding
 import java.util.function.BiFunction
@@ -45,10 +50,25 @@ class BlankFragment : Fragment(R.layout.fragment_blank) {
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setVibrate(longArrayOf(0))
 
-            with(NotificationManagerCompat.from(requireContext())) {
-                // notificationId is a unique int for each notification that you must define
-                notify(1001, builder.build())
+            when {
+                ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                    with(NotificationManagerCompat.from(requireContext())) {
+                        // notificationId is a unique int for each notification that you must define
+                        notify(1001, builder.build())
+                    }
+                }
+                shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) -> {
+                    // show an explanation to the user
+                    Toast.makeText(requireContext(), "Please grant permission", Toast.LENGTH_SHORT).show()
+                } else -> {
+                    // request the permission
+                    requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 0)
+                }
             }
+
         }
     }
 
