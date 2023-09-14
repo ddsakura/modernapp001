@@ -12,7 +12,6 @@ import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -20,10 +19,23 @@ import androidx.fragment.app.Fragment
 import cc.ddsakura.modernapp001.databinding.FragmentBlankBinding
 import java.util.function.BiFunction
 
-
 class BlankFragment : Fragment(R.layout.fragment_blank) {
     private var _binding: FragmentBlankBinding? = null
     private val binding get() = _binding!!
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // PERMISSION GRANTED
+            Toast.makeText(requireContext(), "Permission granted!", Toast.LENGTH_SHORT)
+                .show()
+        } else {
+            // PERMISSION NOT GRANTED
+            Toast.makeText(requireContext(), "Please grant permission", Toast.LENGTH_SHORT)
+                .show()
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -44,11 +56,11 @@ class BlankFragment : Fragment(R.layout.fragment_blank) {
             val channelId = "CHANNEL_ID"
             createNotificationChannel(channelId)
             val builder = NotificationCompat.Builder(requireContext(), channelId)
-                    .setSmallIcon(R.drawable.cross)
-                    .setContentTitle("This is Title")
-                    .setContentText("This is Content")
-                    .setPriority(NotificationCompat.PRIORITY_HIGH)
-                    .setVibrate(longArrayOf(0))
+                .setSmallIcon(R.drawable.cross)
+                .setContentTitle("This is Title")
+                .setContentText("This is Content")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setVibrate(longArrayOf(0))
 
             when {
                 ContextCompat.checkSelfPermission(
@@ -60,12 +72,16 @@ class BlankFragment : Fragment(R.layout.fragment_blank) {
                         notify(1001, builder.build())
                     }
                 }
+
                 shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) -> {
                     // show an explanation to the user
-                    Toast.makeText(requireContext(), "Please grant permission", Toast.LENGTH_SHORT).show()
-                } else -> {
+                    Toast.makeText(requireContext(), "Please grant permission", Toast.LENGTH_SHORT)
+                        .show()
+                }
+
+                else -> {
                     // request the permission
-                    requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 0)
+                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             }
 
@@ -85,7 +101,8 @@ class BlankFragment : Fragment(R.layout.fragment_blank) {
             val importance = NotificationManager.IMPORTANCE_HIGH
             val mChannel = NotificationChannel(channelId, name, importance)
             mChannel.description = descriptionText
-            val notificationManager = requireActivity().getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            val notificationManager =
+                requireActivity().getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(mChannel)
         }
     }
