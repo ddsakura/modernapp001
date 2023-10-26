@@ -4,8 +4,6 @@ plugins {
 }
 
 android {
-    // https://codelabs.developers.google.com/handling-gesture-back-navigation#4
-    compileSdkVersion 34
 
     buildFeatures {
         // for view binding, https://developer.android.com/topic/libraries/view-binding
@@ -14,8 +12,10 @@ android {
 
     defaultConfig {
         applicationId "cc.ddsakura.modernapp001"
-        minSdkVersion 21
-        targetSdkVersion 33
+        minSdk 21
+        // https://codelabs.developers.google.com/handling-gesture-back-navigation#4
+        compileSdk 34
+        targetSdk 33
         versionCode 1
         versionName "1.0"
 
@@ -56,14 +56,14 @@ dependencies {
     // implementation 'androidx.appcompat:appcompat:1.4.2'
     implementation 'androidx.appcompat:appcompat:1.7.0-alpha03'
     implementation 'androidx.fragment:fragment-ktx:1.6.1'
-    implementation 'com.google.android.material:material:1.9.0'
+    implementation 'com.google.android.material:material:1.10.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 
     // Compose
-    implementation 'androidx.activity:activity-compose:1.7.2'
-    implementation "androidx.navigation:navigation-compose:2.7.2"
-    def composeBom = platform('androidx.compose:compose-bom:2023.01.00')
+    implementation 'androidx.activity:activity-compose:1.8.0'
+    implementation "androidx.navigation:navigation-compose:2.7.4"
+    def composeBom = platform('androidx.compose:compose-bom:2023.10.00')
     implementation composeBom
     androidTestImplementation composeBom
     implementation 'androidx.compose.ui:ui'
@@ -78,8 +78,8 @@ dependencies {
     // AppWidget Compose
     implementation "androidx.glance:glance-appwidget:1.0.0"
 
-    implementation "androidx.navigation:navigation-fragment-ktx:2.7.2"
-    implementation "androidx.navigation:navigation-ui-ktx:2.7.2"
+    implementation "androidx.navigation:navigation-fragment-ktx:2.7.4"
+    implementation "androidx.navigation:navigation-ui-ktx:2.7.4"
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
