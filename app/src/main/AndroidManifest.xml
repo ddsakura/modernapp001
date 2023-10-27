@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.DETECT_SCREEN_CAPTURE" />
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Android 13 notification runtime permission, https://developer.android.com/about/versions/13/changes/notification-permission-->
