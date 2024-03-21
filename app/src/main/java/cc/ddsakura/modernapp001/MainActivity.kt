@@ -3,9 +3,7 @@ package cc.ddsakura.modernapp001
 import android.Manifest.permission.POST_NOTIFICATIONS
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Bundle
-import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -13,7 +11,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,7 +35,6 @@ import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,7 +46,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -59,7 +54,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import cc.ddsakura.modernapp001.extensions.getActivity
+import cc.ddsakura.modernapp001.network.APIClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.function.BiFunction
 
 // xml way
@@ -69,17 +67,28 @@ import java.util.function.BiFunction
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = APIClient.apiService.get200()
+                println("api: " + result.message())
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
         setContent {
             // Navigating with Compose: https://developer.android.com/jetpack/compose/navigation
             // https://developer.android.com/jetpack/compose/navigation#bottom_navigation
             val navController = rememberNavController()
             val currentBackStack by navController.currentBackStackEntryAsState()
             val currentDestination = currentBackStack?.destination
-            val currentScreen = NavBarItems.BarItems.find { it.route == currentDestination?.route } ?: NavBarItems.BarItems[0]
+            val currentScreen = NavBarItems.BarItems.find { it.route == currentDestination?.route }
+                ?: NavBarItems.BarItems[0]
             Scaffold(
-                topBar = { TopAppBar(title = {
-                    Text(text = currentScreen.title)
-                }) },
+                topBar = {
+                    TopAppBar(title = {
+                        Text(text = currentScreen.title)
+                    })
+                },
                 // https://stackoverflow.com/questions/72084865/content-padding-parameter-it-is-not-used
                 content = { padding ->
                     Column(
@@ -278,14 +287,17 @@ private fun MainContent(tag: String, mainContentViewModel: MainContentViewModel 
         }
         item {
             MyFunctionButton(resId = R.string.heads_up_notification, onClick = {
-                if (ContextCompat.checkSelfPermission(context, POST_NOTIFICATIONS) == PackageManager.PERMISSION_DENIED) {
+                if (ContextCompat.checkSelfPermission(
+                        context,
+                        POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_DENIED
+                ) {
                     // show a custom message explaining why the app needs the notification permission
                     showAlertDialog.value = true
                 } else {
                     // notification permission is granted, show a Snackbar to let the user know
                     mainContentViewModel.createIfNeedAndSendNotification(context)
                 }
-
 
 
 //                when {

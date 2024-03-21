@@ -55,6 +55,8 @@ dependencies {
     implementation(libs.constraintlayout)
     implementation(libs.legacy.support.v4)
 
+    implementation(libs.retrofit)
+
     implementation(libs.activity.compose)
     implementation(libs.navigation.compose)
     implementation(platform(libs.androidx.compose.bom))
