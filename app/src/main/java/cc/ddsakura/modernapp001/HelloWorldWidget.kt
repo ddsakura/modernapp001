@@ -6,11 +6,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.GlanceTheme
+import androidx.glance.ImageProvider
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.components.Scaffold
+import androidx.glance.appwidget.components.TitleBar
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Column
+import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
 import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
@@ -29,16 +35,30 @@ class HelloWorldWidget : GlanceAppWidget() {
 
     @Composable
     fun MyContent() {
-        Column(
-            modifier = GlanceModifier
-                .padding(8.dp)
-                .background(Color.Yellow)
+        Scaffold(
+            titleBar = {
+                TitleBar(
+                    textColor = GlanceTheme.colors.onSurface,
+                    startIcon = ImageProvider(R.drawable.ic_launcher_foreground),
+                    title = "Hello World Widget",
+                )
+            },
+            backgroundColor = GlanceTheme.colors.widgetBackground,
+            modifier = GlanceModifier.fillMaxSize(),
         ) {
-            Text(
-                text = "Hello World",
-                style = TextStyle(color = ColorProvider(Color.Black))
-            )
+            Column(
+                modifier = GlanceModifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+                    .background(Color.Yellow)
+            ) {
+                Text(
+                    text = "Hello World",
+                    style = TextStyle(color = ColorProvider(Color.Black))
+                )
+            }
         }
+
     }
 }
 

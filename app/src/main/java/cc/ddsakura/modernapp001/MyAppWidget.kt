@@ -38,14 +38,14 @@ class MyAppWidget : GlanceAppWidget() {
     override var stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
-            Content()
+            val prefs = currentState<Preferences>()
+            val count = prefs[countPreferenceKey] ?: 0
+            Content(count)
         }
     }
 
     @Composable
-    fun Content() {
-        val prefs = currentState<Preferences>()
-        val count = prefs[countPreferenceKey] ?: 0
+    fun Content(count: Int = 0) {
         Column(
             modifier = GlanceModifier
                 .padding(8.dp)
