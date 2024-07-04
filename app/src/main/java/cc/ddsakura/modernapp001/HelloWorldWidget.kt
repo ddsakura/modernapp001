@@ -10,6 +10,7 @@ import androidx.glance.GlanceTheme
 import androidx.glance.ImageProvider
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.components.CircleIconButton
 import androidx.glance.appwidget.components.Scaffold
 import androidx.glance.appwidget.components.TitleBar
 import androidx.glance.appwidget.provideContent
@@ -40,7 +41,17 @@ class HelloWorldWidget : GlanceAppWidget() {
                 TitleBar(
                     textColor = GlanceTheme.colors.onSurface,
                     startIcon = ImageProvider(R.drawable.ic_launcher_foreground),
-                    title = "Hello World Widget",
+                    title = "Hello!",
+                    actions = {
+                        CircleIconButton(
+                            imageProvider = ImageProvider(R.drawable.refresh_icon),
+                            contentDescription = "Refresh",
+                            contentColor = GlanceTheme.colors.secondary,
+                            backgroundColor = null, // transparent
+                            onClick = { /* do something */
+                            }
+                        )
+                    }
                 )
             },
             backgroundColor = GlanceTheme.colors.widgetBackground,
