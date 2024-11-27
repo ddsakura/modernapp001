@@ -20,20 +20,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.AlertDialog
-import androidx.compose.material.BottomNavigation
-import androidx.compose.material.BottomNavigationItem
-import androidx.compose.material.Button
-import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,6 +67,8 @@ import java.util.function.BiFunction
 
 // compose way
 class MainActivity : AppCompatActivity() {
+
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         CoroutineScope(Dispatchers.IO).launch {
@@ -85,7 +89,12 @@ class MainActivity : AppCompatActivity() {
                 ?: NavBarItems.BarItems[0]
             Scaffold(
                 topBar = {
-                    TopAppBar(title = {
+                    TopAppBar(
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            titleContentColor = MaterialTheme.colorScheme.primary,
+                        ),
+                        title = {
                         Text(text = currentScreen.title)
                     })
                 },
@@ -161,12 +170,12 @@ fun NavigationHost(tag: String, navController: NavHostController) {
 
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {
-    BottomNavigation {
+    NavigationBar {
         val backStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = backStackEntry?.destination?.route
 
         NavBarItems.BarItems.forEach { navItem ->
-            BottomNavigationItem(
+            NavigationBarItem(
                 selected = currentRoute == navItem.route,
                 onClick = {
                     navController.navigate(navItem.route) {
@@ -381,7 +390,7 @@ private fun MainContent(tag: String, mainContentViewModel: MainContentViewModel 
         }
         items(25) { index ->
             Surface(
-                color = MaterialTheme.colors.primary,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
             ) {
                 Row(
@@ -399,7 +408,7 @@ private fun MainContent(tag: String, mainContentViewModel: MainContentViewModel 
 @Composable
 private fun MyFunctionButton(@StringRes resId: Int, onClick: () -> Unit) {
     Surface(
-        color = MaterialTheme.colors.primary,
+        color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
     ) {
         Row(

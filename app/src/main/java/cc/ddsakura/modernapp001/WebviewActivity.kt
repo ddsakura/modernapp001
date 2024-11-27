@@ -11,17 +11,29 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.WebViewClientCompat
 
 class WebviewActivity : AppCompatActivity() {
 
-
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val myWebView = WebView(applicationContext)
-        setContentView(myWebView)
+        setContentView(R.layout.activity_webview)
 
+        // 設置窗口插入監聽器以調整系統欄位的填充
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.root_webview)) { view, windowInsets ->
+            // 獲取系統欄位（狀態欄、導航欄等）的插入
+            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            // 根據插入設置視圖的填充
+            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)
+            // 表示插入已被消耗
+            WindowInsetsCompat.CONSUMED
+        }
+
+        val myWebView = findViewById<WebView>(R.id.myWebView)
         myWebView.settings.apply {
             javaScriptEnabled = true
             userAgentString = "$userAgentString HelloUserAgent"
