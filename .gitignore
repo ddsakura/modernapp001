@@ -17,3 +17,6 @@ local.properties
 
 # Kotlin
 .kotlin/
+
+# Visual Studio Code
+.vscode/
