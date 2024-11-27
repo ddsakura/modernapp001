@@ -1,5 +1,6 @@
 package cc.ddsakura.modernapp001
 
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -34,6 +35,7 @@ class HelloWorldWidget : GlanceAppWidget() {
         }
     }
 
+    @SuppressLint("RestrictedApi")
     @Composable
     fun MyContent() {
         Scaffold(

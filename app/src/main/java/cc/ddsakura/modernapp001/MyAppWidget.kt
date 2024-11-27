@@ -1,8 +1,9 @@
 package cc.ddsakura.modernapp001
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
-import androidx.compose.material.MaterialTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,7 @@ class MyAppWidget : GlanceAppWidget() {
         }
     }
 
+    @SuppressLint("RestrictedApi")
     @Composable
     fun Content(count: Int = 0) {
         Column(
@@ -67,7 +69,7 @@ class MyAppWidget : GlanceAppWidget() {
                 modifier = GlanceModifier.fillMaxWidth(),
                 style = TextStyle(
                     textAlign = TextAlign.Center,
-                    color = ColorProvider(MaterialTheme.colors.onSurface),
+                    color = ColorProvider(MaterialTheme.colorScheme.onSurface),
                 )
             )
             Spacer(modifier = GlanceModifier.padding(8.dp))
