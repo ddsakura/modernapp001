@@ -45,7 +45,6 @@ dependencies {
     implementation(libs.core.ktx)
     implementation(libs.appcompat)
     implementation(libs.fragment.ktx)
-    // implementation(libs.material3)
     implementation(libs.constraintlayout)
     implementation(libs.legacy.support.v4)
 
@@ -58,7 +57,6 @@ dependencies {
     implementation(libs.androidx.compose.ui)
 
     implementation(libs.androidx.compose.material3)
-    // implementation(libs.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.ui.tooling.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
