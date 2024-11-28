@@ -12,7 +12,9 @@ class MainActivity2 : AppCompatActivity() {
         setContentView(R.layout.activity_main2)
 
         // 設置窗口插入監聽器以調整系統欄位的填充
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.root_view2)) { view, windowInsets ->
+        ViewCompat.setOnApplyWindowInsetsListener(
+            findViewById(R.id.root_view2)
+        ) { view, windowInsets ->
             // 獲取系統欄位（狀態欄、導航欄等）的插入
             val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
             // 根據插入設置視圖的填充

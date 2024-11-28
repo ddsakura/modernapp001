@@ -22,19 +22,22 @@ class MainContentViewModel : ViewModel() {
             val mChannel = NotificationChannel(channelId, name, importance)
             mChannel.description = descriptionText
             val notificationManager =
-                context.getSystemService(AppCompatActivity.NOTIFICATION_SERVICE) as NotificationManager
+                context.getSystemService(
+                    AppCompatActivity.NOTIFICATION_SERVICE
+                ) as NotificationManager
             notificationManager.createNotificationChannel(mChannel)
         }
     }
 
     private fun sendNotification(context: Context) {
         val channelId = "CHANNEL_ID"
-        val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.cross)
-            .setContentTitle("This is Title")
-            .setContentText("This is Content")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setVibrate(longArrayOf(0))
+        val builder =
+            NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(R.drawable.cross)
+                .setContentTitle("This is Title")
+                .setContentText("This is Content")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setVibrate(longArrayOf(0))
 
         with(NotificationManagerCompat.from(context)) {
             if (ActivityCompat.checkSelfPermission(

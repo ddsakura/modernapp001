@@ -28,6 +28,7 @@ import androidx.glance.unit.ColorProvider
 
 class HelloWorldWidget : GlanceAppWidget() {
     override var stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             // create your AppWidget here
@@ -49,18 +50,21 @@ class HelloWorldWidget : GlanceAppWidget() {
                             imageProvider = ImageProvider(R.drawable.refresh_icon),
                             contentDescription = "Refresh",
                             contentColor = GlanceTheme.colors.secondary,
-                            backgroundColor = null, // transparent
-                            onClick = { /* do something */
+                            // transparent
+                            backgroundColor = null,
+                            onClick = {
+                                // do something
                             }
                         )
                     }
                 )
             },
             backgroundColor = GlanceTheme.colors.widgetBackground,
-            modifier = GlanceModifier.fillMaxSize(),
+            modifier = GlanceModifier.fillMaxSize()
         ) {
             Column(
-                modifier = GlanceModifier
+                modifier =
+                GlanceModifier
                     .fillMaxWidth()
                     .padding(8.dp)
                     .background(Color.Yellow)
@@ -71,7 +75,6 @@ class HelloWorldWidget : GlanceAppWidget() {
                 )
             }
         }
-
     }
 }
 

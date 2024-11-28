@@ -37,6 +37,7 @@ import androidx.glance.unit.ColorProvider
 
 class MyAppWidget : GlanceAppWidget() {
     override var stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             val prefs = currentState<Preferences>()
@@ -49,7 +50,8 @@ class MyAppWidget : GlanceAppWidget() {
     @Composable
     fun Content(count: Int = 0) {
         Column(
-            modifier = GlanceModifier
+            modifier =
+            GlanceModifier
                 .padding(8.dp)
                 .background(Color.Yellow),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -58,8 +60,10 @@ class MyAppWidget : GlanceAppWidget() {
             Button(
                 text = "Hello World + 1",
                 style = TextStyle(color = ColorProvider(Color.Black)),
-                onClick = actionRunCallback<UpdateCountActionCallback>(
-                    parameters = actionParametersOf(
+                onClick =
+                actionRunCallback<UpdateCountActionCallback>(
+                    parameters =
+                    actionParametersOf(
                         countParamKey to (count + 1)
                     )
                 )
@@ -67,9 +71,10 @@ class MyAppWidget : GlanceAppWidget() {
             Text(
                 text = count.toString(),
                 modifier = GlanceModifier.fillMaxWidth(),
-                style = TextStyle(
+                style =
+                TextStyle(
                     textAlign = TextAlign.Center,
-                    color = ColorProvider(MaterialTheme.colorScheme.onSurface),
+                    color = ColorProvider(MaterialTheme.colorScheme.onSurface)
                 )
             )
             Spacer(modifier = GlanceModifier.padding(8.dp))
@@ -83,15 +88,12 @@ class MyAppWidget : GlanceAppWidget() {
 }
 
 class UpdateCountActionCallback : ActionCallback {
-    override suspend fun onAction(
-        context: Context,
-        glanceId: GlanceId,
-        parameters: ActionParameters
-    ) {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         Log.d("MyAppWidget", "Item with id $glanceId and params $parameters clicked.")
-        val count = requireNotNull(parameters[countParamKey]) {
-            "Add $countParamKey parameter in the ActionParameters of this action."
-        }
+        val count =
+            requireNotNull(parameters[countParamKey]) {
+                "Add $countParamKey parameter in the ActionParameters of this action."
+            }
 
         // Update the count in the preferences data store
         updateAppWidgetState(

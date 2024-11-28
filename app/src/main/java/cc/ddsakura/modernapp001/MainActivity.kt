@@ -57,17 +57,16 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import cc.ddsakura.modernapp001.network.APIClient
+import java.util.function.BiFunction
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.util.function.BiFunction
 
 // xml way
 // class MainActivity : AppCompatActivity(R.layout.activity_main)
 
 // compose way
 class MainActivity : AppCompatActivity() {
-
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,23 +84,27 @@ class MainActivity : AppCompatActivity() {
             val navController = rememberNavController()
             val currentBackStack by navController.currentBackStackEntryAsState()
             val currentDestination = currentBackStack?.destination
-            val currentScreen = NavBarItems.BarItems.find { it.route == currentDestination?.route }
-                ?: NavBarItems.BarItems[0]
+            val currentScreen =
+                NavBarItems.BarItems.find { it.route == currentDestination?.route }
+                    ?: NavBarItems.BarItems[0]
             Scaffold(
                 topBar = {
                     TopAppBar(
-                        colors = TopAppBarDefaults.topAppBarColors(
+                        colors =
+                        TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            titleContentColor = MaterialTheme.colorScheme.primary,
+                            titleContentColor = MaterialTheme.colorScheme.primary
                         ),
                         title = {
-                        Text(text = currentScreen.title)
-                    })
+                            Text(text = currentScreen.title)
+                        }
+                    )
                 },
                 // https://stackoverflow.com/questions/72084865/content-padding-parameter-it-is-not-used
                 content = { padding ->
                     Column(
-                        modifier = Modifier
+                        modifier =
+                        Modifier
                             .padding(padding)
                     ) {
                         NavigationHost(TAG, navController = navController)
@@ -120,7 +123,9 @@ class MainActivity : AppCompatActivity() {
 // https://kotlinlang.org/docs/sealed-classes.html
 sealed class NavRoutes(val route: String) {
     object Home : NavRoutes("home")
+
     object Contacts : NavRoutes("contacts")
+
     object Favorites : NavRoutes("favorites")
 }
 
@@ -131,30 +136,31 @@ data class BarItem(
 )
 
 object NavBarItems {
-    val BarItems = listOf(
-        BarItem(
-            title = "Home",
-            image = Icons.Filled.Home,
-            route = NavRoutes.Home.route
-        ),
-        BarItem(
-            title = "Contacts",
-            image = Icons.Filled.Face,
-            route = NavRoutes.Contacts.route
-        ),
-        BarItem(
-            title = "Favorites",
-            image = Icons.Filled.Favorite,
-            route = NavRoutes.Favorites.route
+    val BarItems =
+        listOf(
+            BarItem(
+                title = "Home",
+                image = Icons.Filled.Home,
+                route = NavRoutes.Home.route
+            ),
+            BarItem(
+                title = "Contacts",
+                image = Icons.Filled.Face,
+                route = NavRoutes.Contacts.route
+            ),
+            BarItem(
+                title = "Favorites",
+                image = Icons.Filled.Favorite,
+                route = NavRoutes.Favorites.route
+            )
         )
-    )
 }
 
 @Composable
 fun NavigationHost(tag: String, navController: NavHostController) {
     NavHost(
         navController = navController,
-        startDestination = NavRoutes.Home.route,
+        startDestination = NavRoutes.Home.route
     ) {
         composable(NavRoutes.Home.route) {
             MainContent(tag)
@@ -215,7 +221,8 @@ fun Contacts() {
             imageVector = Icons.Filled.Face,
             contentDescription = NavRoutes.Contacts.route,
             tint = Color.Blue,
-            modifier = Modifier
+            modifier =
+            Modifier
                 .size(150.dp)
                 .align(Alignment.Center)
         )
@@ -237,7 +244,8 @@ fun Favorites(tag: String) {
             imageVector = Icons.Filled.Favorite,
             contentDescription = NavRoutes.Favorites.route,
             tint = Color.Blue,
-            modifier = Modifier
+            modifier =
+            Modifier
                 .size(150.dp)
                 .align(Alignment.Center)
         )
@@ -249,20 +257,20 @@ private fun MainContent(tag: String, mainContentViewModel: MainContentViewModel 
     val context = LocalContext.current
     val permissionState = remember { mutableStateOf(false) }
     val showAlertDialog = remember { mutableStateOf(false) }
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        permissionState.value = isGranted
-        if (isGranted) {
-            // Permission Accepted: Do something
-            Log.d(tag, "PERMISSION GRANTED")
-            mainContentViewModel.createIfNeedAndSendNotification(context)
-        } else {
-            // Permission Denied: Do something
-            Log.d(tag, "PERMISSION DENIED")
-
+    val launcher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            permissionState.value = isGranted
+            if (isGranted) {
+                // Permission Accepted: Do something
+                Log.d(tag, "PERMISSION GRANTED")
+                mainContentViewModel.createIfNeedAndSendNotification(context)
+            } else {
+                // Permission Denied: Do something
+                Log.d(tag, "PERMISSION DENIED")
+            }
         }
-    }
 
     if (showAlertDialog.value) {
         AlertDialog(
@@ -307,7 +315,6 @@ private fun MainContent(tag: String, mainContentViewModel: MainContentViewModel 
                     // notification permission is granted, show a Snackbar to let the user know
                     mainContentViewModel.createIfNeedAndSendNotification(context)
                 }
-
 
 //                when {
 //                    ContextCompat.checkSelfPermission(
@@ -394,7 +401,8 @@ private fun MainContent(tag: String, mainContentViewModel: MainContentViewModel 
                 modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
             ) {
                 Row(
-                    modifier = Modifier
+                    modifier =
+                    Modifier
                         .fillMaxWidth()
                         .padding(24.dp)
                 ) {
@@ -412,7 +420,8 @@ private fun MyFunctionButton(@StringRes resId: Int, onClick: () -> Unit) {
         modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
     ) {
         Row(
-            modifier = Modifier
+            modifier =
+            Modifier
                 .fillMaxWidth()
                 .padding(24.dp)
         ) {
