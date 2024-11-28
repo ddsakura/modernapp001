@@ -1,19 +1,20 @@
 package cc.ddsakura.modernapp001.network
 
+import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.http.GET
-import java.util.concurrent.TimeUnit
 
 object APIClient {
     val apiService by lazy {
-        val okHttpClient = OkHttpClient.Builder()
-            .connectTimeout(1, TimeUnit.SECONDS)
-            .writeTimeout(1, TimeUnit.SECONDS)
-            .readTimeout(1, TimeUnit.SECONDS)
-            .build()
+        val okHttpClient =
+            OkHttpClient.Builder()
+                .connectTimeout(1, TimeUnit.SECONDS)
+                .writeTimeout(1, TimeUnit.SECONDS)
+                .readTimeout(1, TimeUnit.SECONDS)
+                .build()
 
         Retrofit.Builder()
             .baseUrl("https://httpstat.us")

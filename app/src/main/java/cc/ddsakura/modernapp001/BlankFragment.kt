@@ -23,19 +23,20 @@ class BlankFragment : Fragment(R.layout.fragment_blank) {
     private var _binding: FragmentBlankBinding? = null
     private val binding get() = _binding!!
 
-    private val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            // PERMISSION GRANTED
-            Toast.makeText(requireContext(), "Permission granted!", Toast.LENGTH_SHORT)
-                .show()
-        } else {
-            // PERMISSION NOT GRANTED
-            Toast.makeText(requireContext(), "Please grant permission", Toast.LENGTH_SHORT)
-                .show()
+    private val requestPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            if (isGranted) {
+                // PERMISSION GRANTED
+                Toast.makeText(requireContext(), "Permission granted!", Toast.LENGTH_SHORT)
+                    .show()
+            } else {
+                // PERMISSION NOT GRANTED
+                Toast.makeText(requireContext(), "Please grant permission", Toast.LENGTH_SHORT)
+                    .show()
+            }
         }
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -55,12 +56,13 @@ class BlankFragment : Fragment(R.layout.fragment_blank) {
         binding.myButton3.setOnClickListener {
             val channelId = "CHANNEL_ID"
             createNotificationChannel(channelId)
-            val builder = NotificationCompat.Builder(requireContext(), channelId)
-                .setSmallIcon(R.drawable.cross)
-                .setContentTitle("This is Title")
-                .setContentText("This is Content")
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setVibrate(longArrayOf(0))
+            val builder =
+                NotificationCompat.Builder(requireContext(), channelId)
+                    .setSmallIcon(R.drawable.cross)
+                    .setContentTitle("This is Title")
+                    .setContentText("This is Content")
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setVibrate(longArrayOf(0))
 
             when {
                 ContextCompat.checkSelfPermission(
@@ -86,7 +88,6 @@ class BlankFragment : Fragment(R.layout.fragment_blank) {
                     }
                 }
             }
-
         }
     }
 

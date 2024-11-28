@@ -16,6 +16,7 @@ navigation-compose = "2.8.4"
 retrofit = "2.9.0"
 webkit = "1.12.1"
 composeBom = "2024.11.00"
+ktlint = "12.1.2"
 
 [libraries]
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
@@ -48,3 +49,4 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
