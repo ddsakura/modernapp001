@@ -1,4 +1,31 @@
-[*.{kt,kts}] # Kotlin files
+# 基本設定
+root = true
+
+[*]
+# 使用 UTF-8 編碼
+charset = utf-8
+# 使用 Unix 換行符號
+end_of_line = lf
+# 縮排大小為 4 個空格
+indent_size = 4
+# 使用空格作為縮排
+indent_style = space
+# 檔案結尾添加空行
+insert_final_newline = true
+# 移除行尾空白
+trim_trailing_whitespace = true
+
+[*.{kt,kts}]
+# IDE 相關設定
+# 使用 Android Studio 的程式碼風格
 ktlint_code_style = android_studio
+# 允許 Composable 函數使用特殊命名
 ktlint_function_naming_ignore_when_annotated_with = Composable
-max_line_length = 200
+
+# 格式化設定
+# 每行最大長度
+max_line_length = 150
+# 檢查檔案命名規則
+ktlint_standard_filename = true
+# 允許尾隨逗號
+ij_kotlin_allow_trailing_comma = false
