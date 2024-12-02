@@ -6,6 +6,7 @@
     <string name="heads_up_notification">Heads-up notification</string>
     <string name="title_activity_main2">MainActivity2</string>
     <string name="title_activity_main3">MainActivity3</string>
+    <string name="title_activity_webview">WebView Activity</string>"
     <!--
     This string is used for square devices and overridden by hello_world in
     values-round/strings.xml for round devices.

@@ -16,6 +16,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.WebViewClientCompat
 
 class WebviewActivity : AppCompatActivity() {
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,7 +24,7 @@ class WebviewActivity : AppCompatActivity() {
 
         // 設置窗口插入監聽器以調整系統欄位的填充
         ViewCompat.setOnApplyWindowInsetsListener(
-            findViewById(R.id.root_webview)
+            findViewById(R.id.my_app_bar_layout)
         ) { view, windowInsets ->
             // 獲取系統欄位（狀態欄、導航欄等）的插入
             val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
