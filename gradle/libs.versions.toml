@@ -1,6 +1,6 @@
 [versions]
 activity-compose = "1.10.1"
-agp = "8.10.1"
+agp = "8.11.0"
 androidx-junit = "1.2.1"
 appcompat = "1.7.1"
 constraintlayout = "2.2.1"
@@ -10,12 +10,12 @@ espresso-core = "3.6.1"
 fragment-ktx = "1.8.8"
 glance = "1.1.1"
 junit = "4.13.2"
-kotlin = "2.1.21"
+kotlin = "2.2.0"
 legacy-support-v4 = "1.0.0"
 navigation-compose = "2.9.0"
 retrofit = "3.0.0"
 webkit = "1.14.0"
-composeBom = "2025.05.01"
+composeBom = "2025.06.01"
 ktlint = "12.3.0"
 
 [libraries]
