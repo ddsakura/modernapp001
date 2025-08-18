@@ -1,21 +1,83 @@
 package cc.ddsakura.modernapp001
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.app.DownloadManager
+import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
+import android.util.Base64
 import android.util.Log
+import android.view.ContextMenu
+import android.view.View
 import android.webkit.ConsoleMessage
+import android.webkit.MimeTypeMap
+import android.webkit.URLUtil
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.webkit.WebViewClientCompat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.IOException
+
+private sealed class SaveResult {
+    object Success : SaveResult()
+    object ImageTooLarge : SaveResult()
+    data class Failure(val exception: Exception) : SaveResult()
+}
 
 class WebviewActivity : AppCompatActivity() {
+
+    companion object {
+        /**
+         * The maximum allowed width or height (in pixels) for images to be saved.
+         * 4096 was chosen to balance image quality and device memory constraints,
+         * and to ensure compatibility with most Android devices and image viewers.
+         * 
+         * If an image exceeds this dimension in either width or height,
+         * the save operation will not proceed and SaveResult.ImageTooLarge will be returned.
+         */
+        private const val MAX_IMAGE_DIMENSION = 4096
+        private const val JPEG_COMPRESSION_QUALITY = 90
+        private const val WEBP_LOSSY_COMPRESSION_QUALITY = 90
+        private const val LOSSLESS_COMPRESSION_QUALITY = 100
+    }
+
+    /**
+     * 處理權限請求結果的啟動器
+     */
+    private var pendingSaveAction: (() -> Unit)? = null
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            // 使用者授予權限後，執行被暫緩的儲存操作
+            pendingSaveAction?.invoke()
+            pendingSaveAction = null // 完成後清除
+        } else {
+            Toast.makeText(this, "Permission denied. Cannot save image.", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,53 +97,273 @@ class WebviewActivity : AppCompatActivity() {
         }
 
         val myWebView = findViewById<WebView>(R.id.myWebView)
-        myWebView.settings.apply {
-            javaScriptEnabled = true
-            userAgentString = "$userAgentString HelloUserAgent"
-        }
-        WebView.setWebContentsDebuggingEnabled(true)
-        myWebView.webViewClient = MyWebViewClient()
-        myWebView.webChromeClient = MyWebChromeClient()
-        myWebView.loadUrl("https://www.google.com")
 
         // ref: https://codelabs.developers.google.com/handling-gesture-back-navigation
         val onBackPressedCallback =
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
-                    when {
-                        myWebView.canGoBack() -> myWebView.goBack()
+                    if (myWebView.canGoBack()) {
+                        myWebView.goBack()
                     }
                 }
             }
-
         onBackPressedDispatcher.addCallback(onBackPressedCallback)
-        disableOnBackPressedCallback(myWebView, onBackPressedCallback)
+
+        // 註冊 WebView 以便長按時可以顯示 ContextMenu (內容選單)
+        registerForContextMenu(myWebView)
+        myWebView.settings.apply {
+            javaScriptEnabled = true
+            userAgentString = "$userAgentString HelloUserAgent"
+        }
+        WebView.setWebContentsDebuggingEnabled(true)
+        myWebView.webViewClient = MyWebViewClient(onBackPressedCallback)
+        myWebView.webChromeClient = MyWebChromeClient()
+        myWebView.loadUrl("https://www.google.com")
     }
 
-    private fun disableOnBackPressedCallback(webView: WebView, onBackPressedCallback: OnBackPressedCallback) {
-        webView.webViewClient =
-            object : WebViewClient() {
-                // Use webView.canGoBack() to determine whether or not the OnBackPressedCallback is enabled.
-                // if the callback is enabled, the app takes control and determines what to do. If the
-                // callbacks is disabled; the back nav gesture will go back to the topmost activity/fragment
-                // in the back stack.
-                override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
-                    onBackPressedCallback.isEnabled = webView.canGoBack()
+    /**
+     * 當 WebView 被長按並註冊過 ContextMenu 時，此方法會被呼叫
+     * 我們在這裡建立圖片專屬的內容選單 (儲存/檢視)
+     */
+    override fun onCreateContextMenu(
+        menu: ContextMenu,
+        v: View,
+        menuInfo: ContextMenu.ContextMenuInfo?
+    ) {
+        super.onCreateContextMenu(menu, v, menuInfo)
+        val webView = v as WebView
+        val result = webView.hitTestResult
+        // 檢查長按的目標是否為圖片類型
+        if (result.type == WebView.HitTestResult.IMAGE_TYPE || result.type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE) {
+            result.extra?.let { imageUrl ->
+                menu.setHeaderTitle("Image Options")
+                // 判斷圖片來源是 data: URI 還是遠端 URL
+                val isDataUri = imageUrl.startsWith("data:")
+
+                // 選單項目：儲存圖片
+                menu.add(0, 1, 0, "Save Image").setOnMenuItemClickListener {
+                    if (isDataUri) {
+                        // 若為 data: URI，走專門的解析和儲存流程
+                        handleDataUriSave(imageUrl)
+                    } else {
+                        // 若為遠端 URL，使用 DownloadManager 下載
+                        handleNetworkUrlSave(imageUrl)
+                    }
+                    true
+                }
+
+                // 選單項目：檢視圖片
+                menu.add(0, 2, 0, "View Image").apply {
+                    // data: URI 無法直接被外部應用程式開啟，故禁用此按鈕
+                    isEnabled = !isDataUri
+                    setOnMenuItemClickListener {
+                        if (!isDataUri) {
+                            val intent = Intent(Intent.ACTION_VIEW, imageUrl.toUri())
+                            startActivity(intent)
+                        }
+                        true
+                    }
                 }
             }
+        }
     }
 
-// Original function to handle back press
-//    private lateinit var myWebView: WebView
-//    override fun onBackPressed() {
-//        if (myWebView.canGoBack())
-//            myWebView.goBack()
-//        else
-//            super.onBackPressed()
-//    }
+    /**
+     * 處理 data: URI 格式的圖片儲存
+     */
+    private fun handleDataUriSave(imageUrl: String) {
+        val parsedData = parseDataUri(imageUrl)
+        if (parsedData != null) {
+            val (mimeType, base64Data) = parsedData
+            // 將儲存邏輯定義為一個動作
+            val saveAction: () -> Unit = {
+                // 使用 lifecycleScope.launch 啟動協程，能感知生命週期，避免記憶體洩漏
+                lifecycleScope.launch {
+                    try {
+                        val imageBytes = withContext(Dispatchers.Default) {
+                            Base64.decode(base64Data, Base64.DEFAULT)
+                        }
+                        saveImageBytesToGallery(this@WebviewActivity, imageBytes, mimeType)
+                    } catch (e: IllegalArgumentException) {
+                        // 捕獲 Base64 解碼錯誤
+                        Log.e("WebviewActivity", "Failed to decode Base64 string.", e)
+                        Toast.makeText(this@WebviewActivity, "Invalid image data format.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            // 執行儲存前，先檢查權限
+            checkPermissionAndSave(saveAction)
+        } else {
+            Toast.makeText(applicationContext, "Unsupported data URI", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * 處理遠端 URL 格式的圖片儲存，使用系統的 DownloadManager
+     */
+    private fun handleNetworkUrlSave(imageUrl: String) {
+        val saveAction = { // 將儲存邏輯定義為一個動作
+            val request = DownloadManager.Request(imageUrl.toUri())
+            val originalFileName = URLUtil.guessFileName(imageUrl, null, MimeTypeMap.getFileExtensionFromUrl(imageUrl))
+            val timestamp = System.currentTimeMillis()
+            val fileName = originalFileName.substringBeforeLast('.')
+            val fileExtension = originalFileName.substringAfterLast('.', "")
+            // 加上時間戳確保每次儲存的檔名都獨一無二
+            val uniqueFileName = if (fileExtension.isNotEmpty()) {
+                "${fileName}_${timestamp}.$fileExtension"
+            } else {
+                "${fileName}_${timestamp}"
+            }
+
+            request.setTitle(uniqueFileName)
+            request.setDescription("Downloading...")
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_PICTURES, uniqueFileName)
+            val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            dm.enqueue(request)
+            Toast.makeText(applicationContext, "Downloading Image...", Toast.LENGTH_SHORT).show()
+        }
+        // 執行儲存前，先檢查權限
+        checkPermissionAndSave(saveAction)
+    }
+
+    /**
+     * 檢查儲存權限，如果具備權限則執行儲存動作，否則請求權限
+     */
+    private fun checkPermissionAndSave(action: () -> Unit) {
+        // Android 10 (API 29) 以上，儲存到公有目錄不需申請 WRITE_EXTERNAL_STORAGE
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            action()
+            return
+        }
+
+        // 對於 Android 9 (API 28) 及以下版本，檢查權限
+        when {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                // 已有權限，直接執行
+                action()
+            }
+            else -> {
+                // 尚未授予權限，發起請求
+                pendingSaveAction = action
+                requestPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            }
+        }
+    }
+
+    /**
+     * 解析 data: URI，回傳 MIME 類型和 Base64 編碼的資料
+     * @return Pair(MIME類型, Base64資料) 或 null (如果格式不符)
+     */
+    private fun parseDataUri(uri: String): Pair<String, String>? {
+        val commaIndex = uri.indexOf(',')
+        if (commaIndex == -1) return null
+
+        val metadata = uri.substring(0, commaIndex)
+        val data = uri.substring(commaIndex + 1)
+
+        if (!metadata.contains(";base64", ignoreCase = true)) return null
+
+        val mimeType = metadata.substringAfter("data:").substringBefore(";")
+        if (mimeType.isBlank()) return null
+
+        return mimeType to data
+    }
+
+    /**
+     * 將解碼後的圖片資料 (ByteArray) 儲存到系統相簿
+     * 使用 suspend 關鍵字標記為協程的掛起函式
+     */
+    private suspend fun saveImageBytesToGallery(context: Context, imageBytes: ByteArray, mimeType: String) {
+        // withContext(Dispatchers.IO) 將檔案讀寫操作切換到 IO 執行緒
+        val result = withContext(Dispatchers.IO) {
+            var uri: Uri? = null
+            try {
+                // 第一階段：僅解碼邊界，檢查圖片尺寸
+                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, options)
+
+                // 使用 class-level 常數來定義最大尺寸，避免魔術數字
+                if (options.outWidth > MAX_IMAGE_DIMENSION || options.outHeight > MAX_IMAGE_DIMENSION) {
+                    return@withContext SaveResult.ImageTooLarge
+                }
+
+                // 第二階段：尺寸安全，完整解碼圖片
+                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                    ?: return@withContext SaveResult.Failure(IOException("Bitmap decoding failed"))
+
+                // 根據 MIME 類型決定壓縮格式，在畫質與檔案大小間取得平衡
+                val (compressFormat, quality) = when {
+                    mimeType.equals("image/jpeg", ignoreCase = true) -> Bitmap.CompressFormat.JPEG to JPEG_COMPRESSION_QUALITY
+                    mimeType.equals("image/webp", ignoreCase = true) -> {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            Bitmap.CompressFormat.WEBP_LOSSY to WEBP_LOSSY_COMPRESSION_QUALITY
+                        } else {
+                            @Suppress("DEPRECATION")
+                            Bitmap.CompressFormat.WEBP to LOSSLESS_COMPRESSION_QUALITY
+                        }
+                    }
+                    else -> Bitmap.CompressFormat.PNG to LOSSLESS_COMPRESSION_QUALITY // 其他格式(如PNG, GIF)使用無損PNG保存
+                }
+
+                val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "png"
+                val displayName = "Image_${System.currentTimeMillis()}.$extension"
+
+                // 使用 ContentResolver 和 ContentValues，這是 Android 10 (Q) 以上推薦的作法
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+                    }
+                }
+
+                val resolver = context.contentResolver
+                val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                } else {
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                }
+                uri = resolver.insert(collection, contentValues)
+                if (uri == null) throw IOException(
+                    "Failed to create new MediaStore record. " +
+                    "Collection: $collection, ContentValues: $contentValues. " +
+                    "Check storage permissions, available space, and content values."
+                )
+
+                resolver.openOutputStream(uri)?.use { stream ->
+                    if (!bitmap.compress(compressFormat, quality, stream)) {
+                        throw IOException("Failed to save bitmap.")
+                    }
+                }
+                SaveResult.Success
+            } catch (e: Exception) {
+                // 如果發生錯誤，清除不完整的項目
+                uri?.let { context.contentResolver.delete(it, null, null) }
+                SaveResult.Failure(e)
+            }
+        }
+
+        // 根據儲存結果，在主執行緒顯示對應的提示訊息
+        when (result) {
+            is SaveResult.Success -> Toast.makeText(context, "Image saved to Gallery", Toast.LENGTH_SHORT).show()
+            is SaveResult.ImageTooLarge -> Toast.makeText(context, "Image is too large to save.", Toast.LENGTH_SHORT).show()
+            is SaveResult.Failure -> {
+                Log.e("WebviewActivity", "Failed to save image", result.exception)
+                Toast.makeText(context, "Error saving image", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 }
 
-private class MyWebViewClient : WebViewClientCompat() {
+/**
+ * 自訂的 WebViewClient
+ * @param onBackPressedCallback 用於處理返回手勢的回調，更新其啟用狀態
+ */
+private class MyWebViewClient(private val onBackPressedCallback: OnBackPressedCallback) : WebViewClientCompat() {
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
         Log.d(
             "WebviewActivity",
@@ -102,6 +384,15 @@ private class MyWebViewClient : WebViewClientCompat() {
             "shouldInterceptRequest WebResourceRequest: ${request?.url} /  ${request?.method}"
         )
         return super.shouldInterceptRequest(view, request)
+    }
+
+    /**
+     * 當 WebView 的歷史紀錄更新時被呼叫
+     * 我們在此根據 WebView 是否可以返回，來決定返回手勢的回調是否啟用
+     */
+    override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
+        super.doUpdateVisitedHistory(view, url, isReload)
+        onBackPressedCallback.isEnabled = view?.canGoBack() ?: false
     }
 }
 
