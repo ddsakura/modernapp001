@@ -2,9 +2,13 @@ package cc.ddsakura.modernapp001
 
 import android.annotation.SuppressLint
 import android.app.DownloadManager
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
@@ -30,6 +34,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.IOException
 
 // NOTE: Add coroutine dependency to app/build.gradle.kts:
 // implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3") // Use the latest version
@@ -114,13 +119,14 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
     }
 
     private fun handleDataUriSave(imageUrl: String) {
-        val base64Data = parseBase64FromDataUri(imageUrl)
-        if (base64Data != null) {
+        val parsedData = parseDataUri(imageUrl)
+        if (parsedData != null) {
+            val (mimeType, base64Data) = parsedData
             launch {
                 val imageBytes = withContext(Dispatchers.Default) {
                     Base64.decode(base64Data, Base64.DEFAULT)
                 }
-                saveImageBytesToGallery(this@WebviewActivity, imageBytes)
+                saveImageBytesToGallery(this@WebviewActivity, imageBytes, mimeType)
             }
         } else {
             Toast.makeText(applicationContext, "Unsupported data URI", Toast.LENGTH_SHORT).show()
@@ -134,40 +140,66 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
         request.setDescription("Downloading...")
         request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
         request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
-        val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+        val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         dm.enqueue(request)
         Toast.makeText(applicationContext, "Downloading Image...", Toast.LENGTH_SHORT).show()
     }
 
-    private fun parseBase64FromDataUri(uri: String): String? {
+    private fun parseDataUri(uri: String): Pair<String, String>? {
         val commaIndex = uri.indexOf(',')
-        if (commaIndex != -1) {
-            if (uri.substring(0, commaIndex).contains("base64", ignoreCase = true)) {
-                return uri.substring(commaIndex + 1)
-            }
-        }
-        return null
+        if (commaIndex == -1) return null
+
+        val metadata = uri.substring(0, commaIndex)
+        val data = uri.substring(commaIndex + 1)
+
+        if (!metadata.contains(";base64", ignoreCase = true)) return null
+
+        val mimeType = metadata.substringAfter("data:").substringBefore(";")
+        if (mimeType.isBlank()) return null
+
+        return mimeType to data
     }
 
     // NOTE: This requires WRITE_EXTERNAL_STORAGE permission on Android 9 (API 28) and below.
-    private suspend fun saveImageBytesToGallery(context: Context, imageBytes: ByteArray) {
+    private suspend fun saveImageBytesToGallery(context: Context, imageBytes: ByteArray, mimeType: String) {
         val success = withContext(Dispatchers.IO) { // Switch to IO thread for file operations
+            val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+            val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "png"
+            val displayName = "Image_${System.currentTimeMillis()}.$extension"
+
+            val contentValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
+                put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+                }
+            }
+
+            val resolver = context.contentResolver
+            var uri: Uri? = null
             try {
-                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-                val displayName = "Image_${System.currentTimeMillis()}"
-                val savedUri = MediaStore.Images.Media.insertImage(
-                    context.contentResolver,
-                    bitmap,
-                    displayName,
-                    "Image from WebView"
-                )
-                savedUri != null
-            } catch (e: Exception) {
+                val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                } else {
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                }
+                uri = resolver.insert(collection, contentValues)
+                if (uri == null) throw IOException("Failed to create new MediaStore record.")
+
+                resolver.openOutputStream(uri)?.use { stream ->
+                    // We decode the bitmap then re-compress it. PNG is a good lossless choice.
+                    if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)) {
+                        throw IOException("Failed to save bitmap.")
+                    }
+                }
+                true // Success
+            } catch (e: IOException) {
+                uri?.let { resolver.delete(it, null, null) } // Clean up if something went wrong
                 Log.e("WebviewActivity", "Failed to save image", e)
-                false
+                false // Failure
             }
         }
-        // Switch back to Main thread to show Toast
+
         if (success) {
             Toast.makeText(context, "Image saved to Gallery", Toast.LENGTH_SHORT).show()
         } else {
