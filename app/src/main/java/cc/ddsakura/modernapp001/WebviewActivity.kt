@@ -328,7 +328,11 @@ class WebviewActivity : AppCompatActivity() {
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI
                 }
                 uri = resolver.insert(collection, contentValues)
-                if (uri == null) throw IOException("Failed to create new MediaStore record.")
+                if (uri == null) throw IOException(
+                    "Failed to create new MediaStore record. " +
+                    "Collection: $collection, ContentValues: $contentValues. " +
+                    "Check storage permissions, available space, and content values."
+                )
 
                 resolver.openOutputStream(uri)?.use { stream ->
                     if (!bitmap.compress(compressFormat, quality, stream)) {
