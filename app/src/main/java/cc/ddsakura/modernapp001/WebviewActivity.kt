@@ -40,6 +40,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 
+private sealed class SaveResult {
+    object Success : SaveResult()
+    object ImageTooLarge : SaveResult()
+    data class Failure(val exception: Exception) : SaveResult()
+}
+
 class WebviewActivity : AppCompatActivity() {
 
     /**
@@ -154,14 +160,20 @@ class WebviewActivity : AppCompatActivity() {
         val parsedData = parseDataUri(imageUrl)
         if (parsedData != null) {
             val (mimeType, base64Data) = parsedData
-            // 將儲存邏輯定義為一個動作，並明確指定其類型為 () -> Unit
+            // 將儲存邏輯定義為一個動作
             val saveAction: () -> Unit = {
                 // 使用 lifecycleScope.launch 啟動協程，能感知生命週期，避免記憶體洩漏
                 lifecycleScope.launch {
-                    val imageBytes = withContext(Dispatchers.Default) {
-                        Base64.decode(base64Data, Base64.DEFAULT)
+                    try {
+                        val imageBytes = withContext(Dispatchers.Default) {
+                            Base64.decode(base64Data, Base64.DEFAULT)
+                        }
+                        saveImageBytesToGallery(this@WebviewActivity, imageBytes, mimeType)
+                    } catch (e: IllegalArgumentException) {
+                        // 捕獲 Base64 解碼錯誤
+                        Log.e("WebviewActivity", "Failed to decode Base64 string.", e)
+                        Toast.makeText(this@WebviewActivity, "Invalid image data format.", Toast.LENGTH_SHORT).show()
                     }
-                    saveImageBytesToGallery(this@WebviewActivity, imageBytes, mimeType)
                 }
             }
             // 執行儲存前，先檢查權限
@@ -192,7 +204,7 @@ class WebviewActivity : AppCompatActivity() {
             request.setDescription("Downloading...")
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, uniqueFileName)
-            val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+            val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             dm.enqueue(request)
             Toast.makeText(applicationContext, "Downloading Image...", Toast.LENGTH_SHORT).show()
         }
@@ -252,23 +264,49 @@ class WebviewActivity : AppCompatActivity() {
      */
     private suspend fun saveImageBytesToGallery(context: Context, imageBytes: ByteArray, mimeType: String) {
         // withContext(Dispatchers.IO) 將檔案讀寫操作切換到 IO 執行緒
-        val success = withContext(Dispatchers.IO) {
-            val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-            val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "png"
-            val displayName = "Image_${System.currentTimeMillis()}.$extension"
-
-            // 使用 ContentResolver 和 ContentValues，這是 Android 10 (Q) 以上推薦的作法
-            val contentValues = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
-                put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
-                }
-            }
-
-            val resolver = context.contentResolver
-            var uri: Uri? = null
+        val result = withContext(Dispatchers.IO) {
             try {
+                // 第一階段：僅解碼邊界，檢查圖片尺寸
+                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, options)
+
+                val maxDimension = 4096 // 設定可接受的最大尺寸
+                if (options.outWidth > maxDimension || options.outHeight > maxDimension) {
+                    return@withContext SaveResult.ImageTooLarge
+                }
+
+                // 第二階段：尺寸安全，完整解碼圖片
+                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                    ?: return@withContext SaveResult.Failure(IOException("Bitmap decoding failed"))
+
+                // 根據 MIME 類型決定壓縮格式，在畫質與檔案大小間取得平衡
+                val (compressFormat, quality) = when {
+                    mimeType.equals("image/jpeg", ignoreCase = true) -> Bitmap.CompressFormat.JPEG to 90
+                    mimeType.equals("image/webp", ignoreCase = true) -> {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            Bitmap.CompressFormat.WEBP_LOSSY to 90
+                        } else {
+                            @Suppress("DEPRECATION")
+                            Bitmap.CompressFormat.WEBP to 100
+                        }
+                    }
+                    else -> Bitmap.CompressFormat.PNG to 100 // 其他格式(如PNG, GIF)使用無損PNG保存
+                }
+
+                val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "png"
+                val displayName = "Image_${System.currentTimeMillis()}.$extension"
+
+                // 使用 ContentResolver 和 ContentValues，這是 Android 10 (Q) 以上推薦的作法
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+                    }
+                }
+
+                val resolver = context.contentResolver
+                var uri: Uri? = null
                 val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
                 } else {
@@ -278,23 +316,24 @@ class WebviewActivity : AppCompatActivity() {
                 if (uri == null) throw IOException("Failed to create new MediaStore record.")
 
                 resolver.openOutputStream(uri)?.use { stream ->
-                    // 我們將解碼後的 bitmap 再壓縮。PNG 是個好的無損格式選擇。
-                    if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)) {
+                    if (!bitmap.compress(compressFormat, quality, stream)) {
                         throw IOException("Failed to save bitmap.")
                     }
                 }
-                true // Success
-            } catch (e: IOException) {
-                uri?.let { resolver.delete(it, null, null) } // 如果發生錯誤，清除不完整的項目
-                Log.e("WebviewActivity", "Failed to save image", e)
-                false // Failure
+                SaveResult.Success
+            } catch (e: Exception) {
+                SaveResult.Failure(e)
             }
         }
 
-        if (success) {
-            Toast.makeText(context, "Image saved to Gallery", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(context, "Error saving image", Toast.LENGTH_SHORT).show()
+        // 根據儲存結果，在主執行緒顯示對應的提示訊息
+        when (result) {
+            is SaveResult.Success -> Toast.makeText(context, "Image saved to Gallery", Toast.LENGTH_SHORT).show()
+            is SaveResult.ImageTooLarge -> Toast.makeText(context, "Image is too large to save.", Toast.LENGTH_SHORT).show()
+            is SaveResult.Failure -> {
+                Log.e("WebviewActivity", "Failed to save image", result.exception)
+                Toast.makeText(context, "Error saving image", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }
