@@ -218,7 +218,7 @@ class WebviewActivity : AppCompatActivity() {
             request.setTitle(uniqueFileName)
             request.setDescription("Downloading...")
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, uniqueFileName)
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_PICTURES, uniqueFileName)
             val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             dm.enqueue(request)
             Toast.makeText(applicationContext, "Downloading Image...", Toast.LENGTH_SHORT).show()
