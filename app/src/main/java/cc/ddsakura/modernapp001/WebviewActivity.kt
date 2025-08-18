@@ -135,11 +135,20 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
 
     private fun handleNetworkUrlSave(imageUrl: String) {
         val request = DownloadManager.Request(imageUrl.toUri())
-        val fileName = URLUtil.guessFileName(imageUrl, null, MimeTypeMap.getFileExtensionFromUrl(imageUrl))
-        request.setTitle(fileName)
+        val originalFileName = URLUtil.guessFileName(imageUrl, null, MimeTypeMap.getFileExtensionFromUrl(imageUrl))
+        val timestamp = System.currentTimeMillis()
+        val fileName = originalFileName.substringBeforeLast('.')
+        val fileExtension = originalFileName.substringAfterLast('.', "")
+        val uniqueFileName = if (fileExtension.isNotEmpty()) {
+            "${fileName}_${timestamp}.$fileExtension"
+        } else {
+            "${fileName}_${timestamp}"
+        }
+
+        request.setTitle(uniqueFileName)
         request.setDescription("Downloading...")
         request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, uniqueFileName)
         val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         dm.enqueue(request)
         Toast.makeText(applicationContext, "Downloading Image...", Toast.LENGTH_SHORT).show()
