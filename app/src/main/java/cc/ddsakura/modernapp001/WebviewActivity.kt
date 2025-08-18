@@ -204,7 +204,7 @@ class WebviewActivity : AppCompatActivity() {
             request.setDescription("Downloading...")
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, uniqueFileName)
-            val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
             dm.enqueue(request)
             Toast.makeText(applicationContext, "Downloading Image...", Toast.LENGTH_SHORT).show()
         }
@@ -306,7 +306,7 @@ class WebviewActivity : AppCompatActivity() {
                 }
 
                 val resolver = context.contentResolver
-                var uri: Uri? = null
+                var uri: Uri?
                 val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
                 } else {
