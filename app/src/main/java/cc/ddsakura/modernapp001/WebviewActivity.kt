@@ -49,6 +49,14 @@ private sealed class SaveResult {
 class WebviewActivity : AppCompatActivity() {
 
     companion object {
+        /**
+         * The maximum allowed width or height (in pixels) for images to be saved.
+         * 4096 was chosen to balance image quality and device memory constraints,
+         * and to ensure compatibility with most Android devices and image viewers.
+         * 
+         * If an image exceeds this dimension in either width or height,
+         * the save operation will not proceed and SaveResult.ImageTooLarge will be returned.
+         */
         private const val MAX_IMAGE_DIMENSION = 4096
         private const val JPEG_COMPRESSION_QUALITY = 90
         private const val WEBP_LOSSY_COMPRESSION_QUALITY = 90
