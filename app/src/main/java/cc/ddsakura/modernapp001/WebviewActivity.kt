@@ -39,6 +39,9 @@ import java.io.IOException
 // NOTE: Add coroutine dependency to app/build.gradle.kts:
 // implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3") // Use the latest version
 
+/**
+ * 實作 CoroutineScope 以便在此 Activity 中輕鬆啟動協程，用於背景處理任務
+ */
 class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Dispatchers.Main) {
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -71,6 +74,7 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
             }
         onBackPressedDispatcher.addCallback(onBackPressedCallback)
 
+        // 註冊 WebView 以便長按時可以顯示 ContextMenu (內容選單)
         registerForContextMenu(myWebView)
         myWebView.settings.apply {
             javaScriptEnabled = true
@@ -82,6 +86,10 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
         myWebView.loadUrl("https://www.google.com")
     }
 
+    /**
+     * 當 WebView 被長按並註冊過 ContextMenu 時，此方法會被呼叫
+     * 我們在這裡建立圖片專屬的內容選單 (儲存/檢視)
+     */
     override fun onCreateContextMenu(
         menu: ContextMenu,
         v: View,
@@ -90,21 +98,28 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
         super.onCreateContextMenu(menu, v, menuInfo)
         val webView = v as WebView
         val result = webView.hitTestResult
+        // 檢查長按的目標是否為圖片類型
         if (result.type == WebView.HitTestResult.IMAGE_TYPE || result.type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE) {
             result.extra?.let { imageUrl ->
                 menu.setHeaderTitle("Image Options")
+                // 判斷圖片來源是 data: URI 還是遠端 URL
                 val isDataUri = imageUrl.startsWith("data:")
 
+                // 選單項目：儲存圖片
                 menu.add(0, 1, 0, "Save Image").setOnMenuItemClickListener {
                     if (isDataUri) {
+                        // 若為 data: URI，走專門的解析和儲存流程
                         handleDataUriSave(imageUrl)
                     } else {
+                        // 若為遠端 URL，使用 DownloadManager 下載
                         handleNetworkUrlSave(imageUrl)
                     }
                     true
                 }
 
+                // 選單項目：檢視圖片
                 menu.add(0, 2, 0, "View Image").apply {
+                    // data: URI 無法直接被外部應用程式開啟，故禁用此按鈕
                     isEnabled = !isDataUri
                     setOnMenuItemClickListener {
                         if (!isDataUri) {
@@ -118,10 +133,14 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
         }
     }
 
+    /**
+     * 處理 data: URI 格式的圖片儲存
+     */
     private fun handleDataUriSave(imageUrl: String) {
         val parsedData = parseDataUri(imageUrl)
         if (parsedData != null) {
             val (mimeType, base64Data) = parsedData
+            // 啟動協程，將解碼和儲存操作放到背景執行緒
             launch {
                 val imageBytes = withContext(Dispatchers.Default) {
                     Base64.decode(base64Data, Base64.DEFAULT)
@@ -133,12 +152,16 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
         }
     }
 
+    /**
+     * 處理遠端 URL 格式的圖片儲存，使用系統的 DownloadManager
+     */
     private fun handleNetworkUrlSave(imageUrl: String) {
         val request = DownloadManager.Request(imageUrl.toUri())
         val originalFileName = URLUtil.guessFileName(imageUrl, null, MimeTypeMap.getFileExtensionFromUrl(imageUrl))
         val timestamp = System.currentTimeMillis()
         val fileName = originalFileName.substringBeforeLast('.')
         val fileExtension = originalFileName.substringAfterLast('.', "")
+        // 加上時間戳確保每次儲存的檔名都獨一無二
         val uniqueFileName = if (fileExtension.isNotEmpty()) {
             "${fileName}_${timestamp}.$fileExtension"
         } else {
@@ -149,11 +172,15 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
         request.setDescription("Downloading...")
         request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
         request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, uniqueFileName)
-        val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
         dm.enqueue(request)
         Toast.makeText(applicationContext, "Downloading Image...", Toast.LENGTH_SHORT).show()
     }
 
+    /**
+     * 解析 data: URI，回傳 MIME 類型和 Base64 編碼的資料
+     * @return Pair(MIME類型, Base64資料) 或 null (如果格式不符)
+     */
     private fun parseDataUri(uri: String): Pair<String, String>? {
         val commaIndex = uri.indexOf(',')
         if (commaIndex == -1) return null
@@ -169,13 +196,19 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
         return mimeType to data
     }
 
-    // NOTE: This requires WRITE_EXTERNAL_STORAGE permission on Android 9 (API 28) and below.
+    /**
+     * 將解碼後的圖片資料 (ByteArray) 儲存到系統相簿
+     * 使用 suspend 關鍵字標記為協程的掛起函式
+     * NOTE: 此方法在 Android 9 (API 28) 及以下版本需要 WRITE_EXTERNAL_STORAGE 權限
+     */
     private suspend fun saveImageBytesToGallery(context: Context, imageBytes: ByteArray, mimeType: String) {
-        val success = withContext(Dispatchers.IO) { // Switch to IO thread for file operations
+        // withContext(Dispatchers.IO) 將檔案讀寫操作切換到 IO 執行緒
+        val success = withContext(Dispatchers.IO) {
             val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
             val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "png"
             val displayName = "Image_${System.currentTimeMillis()}.$extension"
 
+            // 使用 ContentResolver 和 ContentValues，這是 Android 10 (Q) 以上推薦的作法
             val contentValues = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
                 put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
@@ -196,14 +229,14 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
                 if (uri == null) throw IOException("Failed to create new MediaStore record.")
 
                 resolver.openOutputStream(uri)?.use { stream ->
-                    // We decode the bitmap then re-compress it. PNG is a good lossless choice.
+                    // 我們將解碼後的 bitmap 再壓縮。PNG 是個好的無損格式選擇。
                     if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)) {
                         throw IOException("Failed to save bitmap.")
                     }
                 }
                 true // Success
             } catch (e: IOException) {
-                uri?.let { resolver.delete(it, null, null) } // Clean up if something went wrong
+                uri?.let { resolver.delete(it, null, null) } // 如果發生錯誤，清除不完整的項目
                 Log.e("WebviewActivity", "Failed to save image", e)
                 false // Failure
             }
@@ -217,6 +250,10 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
     }
 }
 
+/**
+ * 自訂的 WebViewClient
+ * @param onBackPressedCallback 用於處理返回手勢的回調，更新其啟用狀態
+ */
 private class MyWebViewClient(private val onBackPressedCallback: OnBackPressedCallback) : WebViewClientCompat() {
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
         Log.d(
@@ -240,6 +277,10 @@ private class MyWebViewClient(private val onBackPressedCallback: OnBackPressedCa
         return super.shouldInterceptRequest(view, request)
     }
 
+    /**
+     * 當 WebView 的歷史紀錄更新時被呼叫
+     * 我們在此根據 WebView 是否可以返回，來決定返回手勢的回調是否啟用
+     */
     override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
         super.doUpdateVisitedHistory(view, url, isReload)
         onBackPressedCallback.isEnabled = view?.canGoBack() ?: false
