@@ -23,6 +23,7 @@ import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.WebViewClientCompat
@@ -103,7 +104,7 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
                     isEnabled = !isDataUri
                     setOnMenuItemClickListener {
                         if (!isDataUri) {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(imageUrl))
+                            val intent = Intent(Intent.ACTION_VIEW, imageUrl.toUri())
                             startActivity(intent)
                         }
                         true
@@ -128,7 +129,7 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
     }
 
     private fun handleNetworkUrlSave(imageUrl: String) {
-        val request = DownloadManager.Request(Uri.parse(imageUrl))
+        val request = DownloadManager.Request(imageUrl.toUri())
         val fileName = URLUtil.guessFileName(imageUrl, null, MimeTypeMap.getFileExtensionFromUrl(imageUrl))
         request.setTitle(fileName)
         request.setDescription("Downloading...")
