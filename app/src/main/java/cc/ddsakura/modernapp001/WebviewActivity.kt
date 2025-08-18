@@ -5,7 +5,6 @@ import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
-import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
@@ -135,7 +134,7 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
         request.setDescription("Downloading...")
         request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
         request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
-        val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
         dm.enqueue(request)
         Toast.makeText(applicationContext, "Downloading Image...", Toast.LENGTH_SHORT).show()
     }
