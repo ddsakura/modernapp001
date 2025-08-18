@@ -48,6 +48,13 @@ private sealed class SaveResult {
 
 class WebviewActivity : AppCompatActivity() {
 
+    companion object {
+        private const val MAX_IMAGE_DIMENSION = 4096
+        private const val JPEG_COMPRESSION_QUALITY = 90
+        private const val WEBP_LOSSY_COMPRESSION_QUALITY = 90
+        private const val LOSSLESS_COMPRESSION_QUALITY = 100
+    }
+
     /**
      * 處理權限請求結果的啟動器
      */
@@ -204,7 +211,7 @@ class WebviewActivity : AppCompatActivity() {
             request.setDescription("Downloading...")
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, uniqueFileName)
-            val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+            val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             dm.enqueue(request)
             Toast.makeText(applicationContext, "Downloading Image...", Toast.LENGTH_SHORT).show()
         }
@@ -265,13 +272,14 @@ class WebviewActivity : AppCompatActivity() {
     private suspend fun saveImageBytesToGallery(context: Context, imageBytes: ByteArray, mimeType: String) {
         // withContext(Dispatchers.IO) 將檔案讀寫操作切換到 IO 執行緒
         val result = withContext(Dispatchers.IO) {
+            var uri: Uri? = null
             try {
                 // 第一階段：僅解碼邊界，檢查圖片尺寸
                 val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                 BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, options)
 
-                val maxDimension = 4096 // 設定可接受的最大尺寸
-                if (options.outWidth > maxDimension || options.outHeight > maxDimension) {
+                // 使用 class-level 常數來定義最大尺寸，避免魔術數字
+                if (options.outWidth > MAX_IMAGE_DIMENSION || options.outHeight > MAX_IMAGE_DIMENSION) {
                     return@withContext SaveResult.ImageTooLarge
                 }
 
@@ -281,16 +289,16 @@ class WebviewActivity : AppCompatActivity() {
 
                 // 根據 MIME 類型決定壓縮格式，在畫質與檔案大小間取得平衡
                 val (compressFormat, quality) = when {
-                    mimeType.equals("image/jpeg", ignoreCase = true) -> Bitmap.CompressFormat.JPEG to 90
+                    mimeType.equals("image/jpeg", ignoreCase = true) -> Bitmap.CompressFormat.JPEG to JPEG_COMPRESSION_QUALITY
                     mimeType.equals("image/webp", ignoreCase = true) -> {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                            Bitmap.CompressFormat.WEBP_LOSSY to 90
+                            Bitmap.CompressFormat.WEBP_LOSSY to WEBP_LOSSY_COMPRESSION_QUALITY
                         } else {
                             @Suppress("DEPRECATION")
-                            Bitmap.CompressFormat.WEBP to 100
+                            Bitmap.CompressFormat.WEBP to LOSSLESS_COMPRESSION_QUALITY
                         }
                     }
-                    else -> Bitmap.CompressFormat.PNG to 100 // 其他格式(如PNG, GIF)使用無損PNG保存
+                    else -> Bitmap.CompressFormat.PNG to LOSSLESS_COMPRESSION_QUALITY // 其他格式(如PNG, GIF)使用無損PNG保存
                 }
 
                 val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: "png"
@@ -306,7 +314,6 @@ class WebviewActivity : AppCompatActivity() {
                 }
 
                 val resolver = context.contentResolver
-                var uri: Uri?
                 val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
                 } else {
@@ -322,6 +329,8 @@ class WebviewActivity : AppCompatActivity() {
                 }
                 SaveResult.Success
             } catch (e: Exception) {
+                // 如果發生錯誤，清除不完整的項目
+                uri?.let { context.contentResolver.delete(it, null, null) }
                 SaveResult.Failure(e)
             }
         }
