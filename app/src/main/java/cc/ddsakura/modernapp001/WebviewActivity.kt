@@ -1,10 +1,12 @@
 package cc.ddsakura.modernapp001
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.DownloadManager
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -25,24 +27,36 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.webkit.WebViewClientCompat
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 
-// NOTE: Add coroutine dependency to app/build.gradle.kts:
-// implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3") // Use the latest version
+class WebviewActivity : AppCompatActivity() {
 
-/**
- * 實作 CoroutineScope 以便在此 Activity 中輕鬆啟動協程，用於背景處理任務
- */
-class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Dispatchers.Main) {
+    /**
+     * 處理權限請求結果的啟動器
+     */
+    private var pendingSaveAction: (() -> Unit)? = null
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            // 使用者授予權限後，執行被暫緩的儲存操作
+            pendingSaveAction?.invoke()
+            pendingSaveAction = null // 完成後清除
+        } else {
+            Toast.makeText(this, "Permission denied. Cannot save image.", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -140,13 +154,18 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
         val parsedData = parseDataUri(imageUrl)
         if (parsedData != null) {
             val (mimeType, base64Data) = parsedData
-            // 啟動協程，將解碼和儲存操作放到背景執行緒
-            launch {
-                val imageBytes = withContext(Dispatchers.Default) {
-                    Base64.decode(base64Data, Base64.DEFAULT)
+            // 將儲存邏輯定義為一個動作，並明確指定其類型為 () -> Unit
+            val saveAction: () -> Unit = {
+                // 使用 lifecycleScope.launch 啟動協程，能感知生命週期，避免記憶體洩漏
+                lifecycleScope.launch {
+                    val imageBytes = withContext(Dispatchers.Default) {
+                        Base64.decode(base64Data, Base64.DEFAULT)
+                    }
+                    saveImageBytesToGallery(this@WebviewActivity, imageBytes, mimeType)
                 }
-                saveImageBytesToGallery(this@WebviewActivity, imageBytes, mimeType)
             }
+            // 執行儲存前，先檢查權限
+            checkPermissionAndSave(saveAction)
         } else {
             Toast.makeText(applicationContext, "Unsupported data URI", Toast.LENGTH_SHORT).show()
         }
@@ -156,25 +175,56 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
      * 處理遠端 URL 格式的圖片儲存，使用系統的 DownloadManager
      */
     private fun handleNetworkUrlSave(imageUrl: String) {
-        val request = DownloadManager.Request(imageUrl.toUri())
-        val originalFileName = URLUtil.guessFileName(imageUrl, null, MimeTypeMap.getFileExtensionFromUrl(imageUrl))
-        val timestamp = System.currentTimeMillis()
-        val fileName = originalFileName.substringBeforeLast('.')
-        val fileExtension = originalFileName.substringAfterLast('.', "")
-        // 加上時間戳確保每次儲存的檔名都獨一無二
-        val uniqueFileName = if (fileExtension.isNotEmpty()) {
-            "${fileName}_${timestamp}.$fileExtension"
-        } else {
-            "${fileName}_${timestamp}"
+        val saveAction = { // 將儲存邏輯定義為一個動作
+            val request = DownloadManager.Request(imageUrl.toUri())
+            val originalFileName = URLUtil.guessFileName(imageUrl, null, MimeTypeMap.getFileExtensionFromUrl(imageUrl))
+            val timestamp = System.currentTimeMillis()
+            val fileName = originalFileName.substringBeforeLast('.')
+            val fileExtension = originalFileName.substringAfterLast('.', "")
+            // 加上時間戳確保每次儲存的檔名都獨一無二
+            val uniqueFileName = if (fileExtension.isNotEmpty()) {
+                "${fileName}_${timestamp}.$fileExtension"
+            } else {
+                "${fileName}_${timestamp}"
+            }
+
+            request.setTitle(uniqueFileName)
+            request.setDescription("Downloading...")
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, uniqueFileName)
+            val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+            dm.enqueue(request)
+            Toast.makeText(applicationContext, "Downloading Image...", Toast.LENGTH_SHORT).show()
+        }
+        // 執行儲存前，先檢查權限
+        checkPermissionAndSave(saveAction)
+    }
+
+    /**
+     * 檢查儲存權限，如果具備權限則執行儲存動作，否則請求權限
+     */
+    private fun checkPermissionAndSave(action: () -> Unit) {
+        // Android 10 (API 29) 以上，儲存到公有目錄不需申請 WRITE_EXTERNAL_STORAGE
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            action()
+            return
         }
 
-        request.setTitle(uniqueFileName)
-        request.setDescription("Downloading...")
-        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, uniqueFileName)
-        val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
-        dm.enqueue(request)
-        Toast.makeText(applicationContext, "Downloading Image...", Toast.LENGTH_SHORT).show()
+        // 對於 Android 9 (API 28) 及以下版本，檢查權限
+        when {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                // 已有權限，直接執行
+                action()
+            }
+            else -> {
+                // 尚未授予權限，發起請求
+                pendingSaveAction = action
+                requestPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            }
+        }
     }
 
     /**
@@ -199,7 +249,6 @@ class WebviewActivity : AppCompatActivity(), CoroutineScope by CoroutineScope(Di
     /**
      * 將解碼後的圖片資料 (ByteArray) 儲存到系統相簿
      * 使用 suspend 關鍵字標記為協程的掛起函式
-     * NOTE: 此方法在 Android 9 (API 28) 及以下版本需要 WRITE_EXTERNAL_STORAGE 權限
      */
     private suspend fun saveImageBytesToGallery(context: Context, imageBytes: ByteArray, mimeType: String) {
         // withContext(Dispatchers.IO) 將檔案讀寫操作切換到 IO 執行緒
