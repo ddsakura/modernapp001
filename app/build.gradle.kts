@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "cc.ddsakura.modernapp001"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "cc.ddsakura.modernapp001"
