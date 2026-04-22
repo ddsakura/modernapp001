@@ -1,6 +1,7 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.androidApplication)
-    alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.ktlint)
 }
@@ -11,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "cc.ddsakura.modernapp001"
-        minSdk = 21
+        minSdk = 23
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -39,6 +40,13 @@ android {
         viewBinding = true
         compose = true
         buildConfig = true
+    }
+}
+
+kotlin {
+    jvmToolchain(17)
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
