@@ -9,12 +9,14 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -70,6 +72,7 @@ class MainActivity : AppCompatActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val result = APIClient.apiService.get200()
@@ -102,13 +105,11 @@ class MainActivity : AppCompatActivity() {
                 },
                 // https://stackoverflow.com/questions/72084865/content-padding-parameter-it-is-not-used
                 content = { padding ->
-                    Column(
-                        modifier =
-                        Modifier
-                            .padding(padding)
-                    ) {
-                        NavigationHost(TAG, navController = navController)
-                    }
+                    NavigationHost(
+                        tag = TAG,
+                        navController = navController,
+                        contentPadding = padding
+                    )
                 },
                 bottomBar = { BottomNavigationBar(navController = navController) }
             )
@@ -129,11 +130,7 @@ sealed class NavRoutes(val route: String) {
     object Favorites : NavRoutes("favorites")
 }
 
-data class BarItem(
-    val title: String,
-    val image: ImageVector,
-    val route: String
-)
+data class BarItem(val title: String, val image: ImageVector, val route: String)
 
 object NavBarItems {
     val BarItems =
@@ -157,19 +154,25 @@ object NavBarItems {
 }
 
 @Composable
-fun NavigationHost(tag: String, navController: NavHostController) {
+fun NavigationHost(tag: String, navController: NavHostController, contentPadding: PaddingValues = PaddingValues(0.dp)) {
     NavHost(
         navController = navController,
         startDestination = NavRoutes.Home.route
     ) {
         composable(NavRoutes.Home.route) {
-            MainContent(tag)
+            MainContent(
+                tag = tag,
+                contentPadding = contentPadding
+            )
         }
         composable(NavRoutes.Contacts.route) {
-            Contacts()
+            Contacts(contentPadding = contentPadding)
         }
         composable(NavRoutes.Favorites.route) {
-            Favorites(tag)
+            Favorites(
+                tag = tag,
+                contentPadding = contentPadding
+            )
         }
     }
 }
@@ -213,9 +216,12 @@ fun BottomNavigationBar(navController: NavHostController) {
 }
 
 @Composable
-fun Contacts() {
+fun Contacts(contentPadding: PaddingValues = PaddingValues(0.dp)) {
     Box(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding)
+            .consumeWindowInsets(contentPadding)
     ) {
         Icon(
             imageVector = Icons.Filled.Face,
@@ -230,7 +236,7 @@ fun Contacts() {
 }
 
 @Composable
-fun Favorites(tag: String) {
+fun Favorites(tag: String, contentPadding: PaddingValues = PaddingValues(0.dp)) {
     // https://io.google/2022/program/5c6a8dbb-7ac2-4c31-a707-0a16e8424970/
     // https://developer.android.com/reference/kotlin/androidx/activity/compose/package-summary#BackHandler(kotlin.Boolean,kotlin.Function0)
     BackHandler(enabled = true) {
@@ -238,7 +244,10 @@ fun Favorites(tag: String) {
     }
 
     Box(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(contentPadding)
+            .consumeWindowInsets(contentPadding)
     ) {
         Icon(
             imageVector = Icons.Filled.Favorite,
@@ -253,7 +262,7 @@ fun Favorites(tag: String) {
 }
 
 @Composable
-private fun MainContent(tag: String, mainContentViewModel: MainContentViewModel = viewModel()) {
+private fun MainContent(tag: String, contentPadding: PaddingValues = PaddingValues(0.dp), mainContentViewModel: MainContentViewModel = viewModel()) {
     val context = LocalContext.current
     val permissionState = remember { mutableStateOf(false) }
     val showAlertDialog = remember { mutableStateOf(false) }
@@ -288,7 +297,12 @@ private fun MainContent(tag: String, mainContentViewModel: MainContentViewModel 
         )
     }
 
-    LazyColumn {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .consumeWindowInsets(contentPadding),
+        contentPadding = contentPadding
+    ) {
         item {
             MyFunctionButton(resId = R.string.open_activity, onClick = {
                 context.startActivity(Intent(context, MainActivity2::class.java))
