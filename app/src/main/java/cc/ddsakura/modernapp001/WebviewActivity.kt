@@ -35,10 +35,10 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.webkit.WebViewClientCompat
+import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.IOException
 
 private sealed class SaveResult {
     object Success : SaveResult()
@@ -53,7 +53,7 @@ class WebviewActivity : AppCompatActivity() {
          * The maximum allowed width or height (in pixels) for images to be saved.
          * 4096 was chosen to balance image quality and device memory constraints,
          * and to ensure compatibility with most Android devices and image viewers.
-         * 
+         *
          * If an image exceeds this dimension in either width or height,
          * the save operation will not proceed and SaveResult.ImageTooLarge will be returned.
          */
@@ -125,11 +125,7 @@ class WebviewActivity : AppCompatActivity() {
      * 當 WebView 被長按並註冊過 ContextMenu 時，此方法會被呼叫
      * 我們在這裡建立圖片專屬的內容選單 (儲存/檢視)
      */
-    override fun onCreateContextMenu(
-        menu: ContextMenu,
-        v: View,
-        menuInfo: ContextMenu.ContextMenuInfo?
-    ) {
+    override fun onCreateContextMenu(menu: ContextMenu, v: View, menuInfo: ContextMenu.ContextMenuInfo?) {
         super.onCreateContextMenu(menu, v, menuInfo)
         val webView = v as WebView
         val result = webView.hitTestResult
@@ -202,7 +198,8 @@ class WebviewActivity : AppCompatActivity() {
      * 處理遠端 URL 格式的圖片儲存，使用系統的 DownloadManager
      */
     private fun handleNetworkUrlSave(imageUrl: String) {
-        val saveAction = { // 將儲存邏輯定義為一個動作
+        val saveAction = {
+            // 將儲存邏輯定義為一個動作
             val request = DownloadManager.Request(imageUrl.toUri())
             val originalFileName = URLUtil.guessFileName(imageUrl, null, MimeTypeMap.getFileExtensionFromUrl(imageUrl))
             val timestamp = System.currentTimeMillis()
@@ -210,9 +207,9 @@ class WebviewActivity : AppCompatActivity() {
             val fileExtension = originalFileName.substringAfterLast('.', "")
             // 加上時間戳確保每次儲存的檔名都獨一無二
             val uniqueFileName = if (fileExtension.isNotEmpty()) {
-                "${fileName}_${timestamp}.$fileExtension"
+                "${fileName}_$timestamp.$fileExtension"
             } else {
-                "${fileName}_${timestamp}"
+                "${fileName}_$timestamp"
             }
 
             request.setTitle(uniqueFileName)
@@ -309,11 +306,13 @@ class WebviewActivity : AppCompatActivity() {
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI
                 }
                 uri = resolver.insert(collection, contentValues)
-                if (uri == null) throw IOException(
-                    "Failed to create new MediaStore record. " +
-                    "Collection: $collection, ContentValues: $contentValues. " +
-                    "Check storage permissions, available space, and content values."
-                )
+                if (uri == null) {
+                    throw IOException(
+                        "Failed to create new MediaStore record. " +
+                            "Collection: $collection, ContentValues: $contentValues. " +
+                            "Check storage permissions, available space, and content values."
+                    )
+                }
 
                 resolver.openOutputStream(uri)?.use { stream ->
                     if (!bitmap.compress(compressFormat, quality, stream)) {
