@@ -20,6 +20,20 @@ class DataUriParserTest {
     }
 
     @Test
+    fun parse_acceptsUppercaseDataScheme() {
+        val result = DataUriParser.parse("DATA:image/webp;base64,UklGRiIAAABXRUJQVlA4")
+
+        assertEquals(ParsedDataUri("image/webp", "UklGRiIAAABXRUJQVlA4"), result)
+    }
+
+    @Test
+    fun parse_acceptsMimeTypeParametersBeforeBase64Marker() {
+        val result = DataUriParser.parse("data:image/png;charset=utf-8;base64,iVBORw0KGgo=")
+
+        assertEquals(ParsedDataUri("image/png", "iVBORw0KGgo="), result)
+    }
+
+    @Test
     fun parse_preservesPayloadCommasAfterFirstSeparator() {
         val result = DataUriParser.parse("data:image/svg+xml;base64,PHN2ZyA+,more-data")
 

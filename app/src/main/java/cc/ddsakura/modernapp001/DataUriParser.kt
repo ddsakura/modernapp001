@@ -13,7 +13,7 @@ internal object DataUriParser {
         if (!metadata.startsWith("data:", ignoreCase = true)) return null
         if (!metadata.contains(";base64", ignoreCase = true)) return null
 
-        val mimeType = metadata.substringAfter("data:").substringBefore(";")
+        val mimeType = metadata.drop("data:".length).substringBefore(";")
         if (mimeType.isBlank()) return null
 
         return ParsedDataUri(mimeType, data)
