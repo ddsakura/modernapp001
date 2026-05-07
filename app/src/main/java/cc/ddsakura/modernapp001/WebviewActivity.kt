@@ -172,7 +172,7 @@ class WebviewActivity : AppCompatActivity() {
      * 處理 data: URI 格式的圖片儲存
      */
     private fun handleDataUriSave(imageUrl: String) {
-        val parsedData = parseDataUri(imageUrl)
+        val parsedData = DataUriParser.parse(imageUrl)
         if (parsedData != null) {
             val (mimeType, base64Data) = parsedData
             // 將儲存邏輯定義為一個動作
@@ -252,25 +252,6 @@ class WebviewActivity : AppCompatActivity() {
                 requestPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
             }
         }
-    }
-
-    /**
-     * 解析 data: URI，回傳 MIME 類型和 Base64 編碼的資料
-     * @return Pair(MIME類型, Base64資料) 或 null (如果格式不符)
-     */
-    private fun parseDataUri(uri: String): Pair<String, String>? {
-        val commaIndex = uri.indexOf(',')
-        if (commaIndex == -1) return null
-
-        val metadata = uri.substring(0, commaIndex)
-        val data = uri.substring(commaIndex + 1)
-
-        if (!metadata.contains(";base64", ignoreCase = true)) return null
-
-        val mimeType = metadata.substringAfter("data:").substringBefore(";")
-        if (mimeType.isBlank()) return null
-
-        return mimeType to data
     }
 
     /**
