@@ -56,6 +56,11 @@ class DataUriParserTest {
     }
 
     @Test
+    fun parse_returnsNullWhenBase64PayloadIsEmpty() {
+        assertNull(DataUriParser.parse("data:image/png;base64,"))
+    }
+
+    @Test
     fun parse_returnsNullWhenMissingCommaSeparator() {
         assertNull(DataUriParser.parse("data:image/png;base64"))
     }

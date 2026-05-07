@@ -18,6 +18,7 @@ class ApiInterfaceContractTest {
     @Test
     fun get200_isSuspendFunctionReturningRetrofitResponse() {
         val method = get200Method()
+        // Retrofit contract tests use reflection here so they do not create a client or make network calls.
         val continuationType = method.genericParameterTypes.single().typeName
 
         assertTrue(continuationType.startsWith(Continuation::class.java.name))

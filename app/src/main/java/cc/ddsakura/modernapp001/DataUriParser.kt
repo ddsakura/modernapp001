@@ -9,6 +9,7 @@ internal object DataUriParser {
 
         val metadata = uri.substring(0, commaIndex)
         val data = uri.substring(commaIndex + 1)
+        if (data.isEmpty()) return null
 
         if (!metadata.startsWith("data:", ignoreCase = true)) return null
         if (!metadata.contains(";base64", ignoreCase = true)) return null
