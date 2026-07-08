@@ -1,9 +1,13 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.ktlint)
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }
 
 android {
@@ -40,13 +44,6 @@ android {
         viewBinding = true
         compose = true
         buildConfig = true
-    }
-}
-
-kotlin {
-    jvmToolchain(17)
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
