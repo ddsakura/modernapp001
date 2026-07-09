@@ -2,6 +2,7 @@
 
 ## Android Modern App Practice
 ### Github Action Test
+This repository uses the [Claude Code GitHub Action](https://github.com/anthropics/claude-code-action) to assist with issues and pull requests. Mention `@claude` in an issue or PR comment to trigger it.
 ### Edge to Edge
 - [Android 的各種 Bar：從 ActionBar 到 CollapsingToolbarLayout](https://medium.com/evan-android-note/android-%E7%9A%84%E5%90%84%E7%A8%AEbar-%E5%BE%9Eactionbar%E5%88%B0collapsingtoolbarlayout-c95d33640be4)
 - [在 Android 15 中處理 Edge-to-Edge 的強制執行](https://developer.android.com/codelabs/edge-to-edge)
