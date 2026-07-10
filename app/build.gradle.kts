@@ -12,12 +12,12 @@ java {
 
 android {
     namespace = "cc.ddsakura.modernapp001"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "cc.ddsakura.modernapp001"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
