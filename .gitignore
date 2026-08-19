@@ -21,3 +21,6 @@ local.properties
 # Visual Studio Code
 .vscode/
 .aider*
+
+# graphify
+/graphify-out/
