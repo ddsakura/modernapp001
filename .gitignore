@@ -24,3 +24,8 @@ local.properties
 
 # graphify
 /graphify-out/
+
+# Stray screenshots/UI dumps left behind by ad-hoc journeys test runs (agents
+# sometimes write these to the working directory instead of build/)
+/app/*.png
+/app/window_dump.xml

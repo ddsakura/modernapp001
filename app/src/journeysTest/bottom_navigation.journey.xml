@@ -1,0 +1,8 @@
+<journey name="bottom_navigation">
+  <description>Switch between the Home, Contacts, and Favorites tabs and verify each screen shows</description>
+  <actions xml:space="preserve">
+    <action>Tap "Contacts" in the bottom navigation bar. Verify a large blue face icon is shown in the center of the screen and the top bar title becomes "Contacts"</action>
+    <action>Tap "Favorites" in the bottom navigation bar. Verify a large blue heart icon is shown in the center of the screen and the top bar title becomes "Favorites"</action>
+    <action>Tap "Home" in the bottom navigation bar. Verify the top bar title becomes "Home" and a scrollable list of buttons and numbered items is shown</action>
+  </actions>
+</journey>
