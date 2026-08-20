@@ -75,14 +75,21 @@ android {
 // crawler client (used by the testOptions.suites block above) is compiled for
 // JDK 21 (class file version 65), but this project pins its Java toolchain to 17
 // above, so the generated test task fails with UnsupportedClassVersionError unless
-// it's forced onto a JDK 21 launcher.
-tasks.withType<Test>().matching { it.name == "testJourneysTestDefaultDebugTestSuite" }.configureEach {
-    javaLauncher.set(
-        javaToolchains.launcherFor {
-            languageVersion.set(JavaLanguageVersion.of(21))
-        }
-    )
-}
+// it's forced onto a JDK 21 launcher. Matched by prefix/suffix (rather than the
+// exact "testJourneysTestDefaultDebugTestSuite" task name) so this keeps applying
+// if more targets or variants are added to the "journeysTest" suite later.
+// A JDK 21 install isn't required on the machine running this: the
+// foojay-resolver-convention plugin (settings.gradle.kts) auto-provisions any
+// toolchain version Gradle can't find locally.
+tasks.withType<Test>()
+    .matching { it.name.startsWith("testJourneysTest") && it.name.endsWith("TestSuite") }
+    .configureEach {
+        javaLauncher.set(
+            javaToolchains.launcherFor {
+                languageVersion.set(JavaLanguageVersion.of(21))
+            }
+        )
+    }
 
 dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
